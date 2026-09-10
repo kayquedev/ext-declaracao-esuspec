@@ -967,12 +967,24 @@ async function generatePdf(d) {
   doc.setFontSize(11);
   doc.text('Também residem neste endereço, os seguintes moradores:', marginX, y);
   y += 4;
-  y = drawTable(
-    doc, marginX, y, maxWidth,
-    ['Nome Completo', 'Nº do Documento (CPF/CNS)', 'Relação de Parentesco'],
-    d.moradores.filter(r => r.some(v => v)),
-    [0.45, 0.30, 0.25], 3
-  );
+  const moradoresPreenchidos = d.moradores.filter(r => r.some(v => v));
+  if (moradoresPreenchidos.length === 0) {
+    // Sem mais nenhum morador além do responsável familiar: não desenha a
+    // tabela de 3 colunas (Nome/Documento/Parentesco), só o aviso.
+    doc.setFont('helvetica', 'bold');
+    doc.text('NÃO RESIDE MAIS NENHUM MORADOR', marginX, y);
+    doc.setFont('helvetica', 'normal');
+    y += 6;
+  } else {
+    // minRows = quantidade real de moradores, para nunca sobrar linha em
+    // branco na tabela (1 morador = 1 linha, 2 = 2 linhas, etc.).
+    y = drawTable(
+      doc, marginX, y, maxWidth,
+      ['Nome Completo', 'Nº do Documento (CPF/CNS)', 'Relação de Parentesco'],
+      moradoresPreenchidos,
+      [0.45, 0.30, 0.25], moradoresPreenchidos.length
+    );
+  }
   y += 8;
 
   doc.text('Últimas visitas realizadas à família:', marginX, y);
