@@ -191,15 +191,20 @@ async function extractAllPagesData() {
    *   1) para cada item: expande, espera o painel carregar, lê;           *
    *   2) mantém a visita só se "Cidadão visitado" == responsável familiar *
    *      (independente de motivo/desfecho);                               *
-   *   3) junta o turno à data ("25/03/2026 (Noite)") e usa só o campo     *
+   *   3) dentre essas, mantém só as em que "Profissional Responsável" ==  *
+   *      o ACS de "Responsabilidade de acompanhamento" (a aba mostra      *
+   *      visitas de outros profissionais também, mas a declaração deve    *
+   *      trazer só as realizadas pelo ACS daquela família);               *
+   *   4) junta o turno à data ("25/03/2026 (Noite)") e usa só o campo     *
    *      "Desfecho" na coluna de desfecho da declaração;                  *
-   *   4) se o accordion não existir, ou não render nada, ou não sabermos  *
+   *   5) se o accordion não existir, ou não render nada, ou não sabermos  *
    *      o nome do responsável, cai para a leitura posicional da tabela   *
    *      sem filtrar — nunca volta vazia à toa, mas avisa na mensagem.    *
    * Extração heurística: sempre confira antes de gerar o PDF.             *
    * ---------------------------------------------------------------------*/
-  async function parseVisitas(nomeResponsavel) {
+  async function parseVisitas(nomeResponsavel, nomeAcs) {
     const nomeNorm = normalizar(nomeResponsavel);
+    const acsNorm = normalizar(nomeAcs);
 
     // A lista de visitas costuma carregar um instante depois da aba abrir;
     // dá até 4s para os itens do accordion aparecerem antes de desistir.
@@ -269,6 +274,7 @@ async function extractAllPagesData() {
     if (items.length) {
       const rows = [];
       let algumPainelComCidadao = false;
+      let algumPainelComProfissional = false;
       const orcamentoMs = 35000;
       const inicio = Date.now();
 
@@ -307,14 +313,19 @@ async function extractAllPagesData() {
           return el ? (el.textContent || '').replace(/\s+/g, ' ').trim() : '';
         };
 
-        let cidadaoVisitado = '', dataTurnoRaw = '', desfecho = '', motivo = '';
+        let cidadaoVisitado = '', dataTurnoRaw = '', desfecho = '', motivo = '', profissionalVisita = '';
         if (painel) {
           cidadaoVisitado = limpaNome(getLabeledValue(painel, ['Cidadão visitado', 'Cidadao visitado']));
           dataTurnoRaw = getLabeledValue(painel, ['Data e turno', 'Data/turno', 'Data da visita']);
           desfecho = getLabeledValue(painel, ['Desfecho', 'Desfecho da visita']);
           motivo = getLabeledValue(painel, ['Motivo da visita', 'Motivos da visita', 'Motivo']);
+          profissionalVisita = limpaNome(getLabeledValue(painel, [
+            'Profissional Responsável', 'Profissional responsavel', 'Profissional',
+            'Executado por', 'Realizado por'
+          ]));
         }
         if (cidadaoVisitado) algumPainelComCidadao = true;
+        if (profissionalVisita) algumPainelComProfissional = true;
 
         const data = soData(dataTurnoRaw) || getField('dataVisita') || soData(item.textContent || '');
         const turno = soTurno(dataTurnoRaw) || soTurno(item.textContent || '');
@@ -330,7 +341,15 @@ async function extractAllPagesData() {
               (cidadaoNorm.length >= 6 && nomeNorm.includes(cidadaoNorm))
             )
           );
-          rows.push({ data, turno, desfecho, motivo, cidadaoVisitado, doResponsavel });
+          const profNorm = normalizar(profissionalVisita);
+          const doProfissional = !!(
+            acsNorm && profNorm && (
+              profNorm === acsNorm ||
+              (acsNorm.length >= 6 && profNorm.includes(acsNorm)) ||
+              (profNorm.length >= 6 && acsNorm.includes(profNorm))
+            )
+          );
+          rows.push({ data, turno, desfecho, motivo, cidadaoVisitado, doResponsavel, profissionalVisita, doProfissional });
         }
       }
 
@@ -368,7 +387,20 @@ async function extractAllPagesData() {
       // responsável. Senão devolve todas as visitas do imóvel, sem
       // filtrar, sinalizando para o popup avisar.
       if (rows.length && algumPainelComCidadao && nomeNorm) {
-        const doResp = rows.filter(r => r.doResponsavel);
+        let doResp = rows.filter(r => r.doResponsavel);
+
+        // Dentre as visitas ao responsável familiar, restringe também ao
+        // ACS de "Responsabilidade de acompanhamento": a aba "Últimas
+        // visitas" traz visitas de outros profissionais, mas a declaração
+        // deve trazer só as realizadas pelo ACS daquela família. Só aplica
+        // se conseguimos ler o profissional em algum painel e ele reduzir
+        // a lista sem zerá-la (senão mantém o filtro anterior, avisando
+        // para conferir).
+        if (algumPainelComProfissional && acsNorm) {
+          const doAcs = doResp.filter(r => r.doProfissional);
+          if (doAcs.length) doResp = doAcs;
+        }
+
         doResp.sort((a, b) => dataOrdenavel(b.data) - dataOrdenavel(a.data));
         return {
           visitas: semDuplicatas(doResp).slice(0, MAX_VISITAS_DECLARACAO).map(montar),
@@ -385,11 +417,14 @@ async function extractAllPagesData() {
       // accordion presente mas nada legível: cai para a leitura da tabela.
     }
 
-    // Sem accordion utilizável: leitura posicional da tabela, sem filtrar.
-    return { visitas: parseVisitasDaTabela(), filtradoPorResponsavel: false };
+    // Sem accordion utilizável: leitura posicional da tabela. Filtra pelo
+    // ACS de "Responsabilidade de acompanhamento" quando a coluna
+    // "Profissional Responsável" está disponível; senão devolve sem
+    // filtrar (heurística — sempre conferir antes de gerar o PDF).
+    return { visitas: parseVisitasDaTabela(acsNorm), filtradoPorResponsavel: false };
   }
 
-  function parseVisitasDaTabela() {
+  function parseVisitasDaTabela(acsNorm) {
     const text = document.body.innerText || '';
     const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
 
@@ -407,12 +442,20 @@ async function extractAllPagesData() {
     if (headerIdx === -1) return [];
 
     // Pula eventuais colunas extras do cabeçalho (Profissional Responsável,
-    // Equipe, Origem etc.) até chegar nos dados da primeira linha.
+    // Equipe, Origem etc.) até chegar nos dados da primeira linha, anotando
+    // em que posição (relativa ao início de cada linha de dados) cada uma
+    // aparece, para poder ler o mesmo valor em cada registro.
     let dataStart = headerIdx + 3;
-    const extraHeaderLabels = ['Profissional Responsável', 'Equipe', 'Origem'].map(normalizar);
-    while (dataStart < lines.length && extraHeaderLabels.includes(normalizar(lines[dataStart]))) {
+    const extraHeaderLabels = ['Profissional Responsável', 'Equipe', 'Origem'];
+    const extraHeadersFound = [];
+    while (dataStart < lines.length &&
+           extraHeaderLabels.map(normalizar).includes(normalizar(lines[dataStart]))) {
+      extraHeadersFound.push(lines[dataStart]);
       dataStart++;
     }
+    const idxProfissional = extraHeadersFound.findIndex(
+      h => normalizar(h) === normalizar('Profissional Responsável')
+    );
 
     const dateLineRe = /^\d{2}\/\d{2}\/\d{4}$/;
     // Marca o fim da tabela (paginação/rodapé: "10 resultados", "Mostrar:50",
@@ -426,25 +469,48 @@ async function extractAllPagesData() {
       if (dateLineRe.test(lines[i])) rowStarts.push(i);
     }
 
+    const camposPorLinha = 3 + extraHeadersFound.length;
     const rows = [];
     for (let r = 0; r < rowStarts.length; r++) {
       const start = rowStarts[r];
       const data = lines[start];
       const desfecho = (lines[start + 1] || '').trim();
       const motivo = (lines[start + 2] || '').trim();
-      if (start + 2 < tableEnd) rows.push({ data, desfecho, motivo });
+      const profissionalVisita = idxProfissional >= 0
+        ? (lines[start + 3 + idxProfissional] || '').trim()
+        : '';
+      if (start + (camposPorLinha - 1) < tableEnd) {
+        rows.push({ data, desfecho, motivo, profissionalVisita });
+      }
     }
 
     function dataOrdenavel(d) {
       const m = (d || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
       return m ? Number(m[3] + m[2] + m[1]) : 0;
     }
-    rows.sort((a, b) => dataOrdenavel(b.data) - dataOrdenavel(a.data));
+
+    // Filtra pelo ACS responsável quando a coluna "Profissional Responsável"
+    // existe na tabela e conseguimos ler o valor em pelo menos uma linha;
+    // se isso zerar a lista (nada bate), mantém tudo, sem filtrar.
+    let filtradas = rows;
+    if (idxProfissional >= 0 && acsNorm && rows.some(r => r.profissionalVisita)) {
+      const doAcs = rows.filter(r => {
+        const profNorm = normalizar(r.profissionalVisita || '');
+        return !!(profNorm && (
+          profNorm === acsNorm ||
+          (acsNorm.length >= 6 && profNorm.includes(acsNorm)) ||
+          (profNorm.length >= 6 && acsNorm.includes(profNorm))
+        ));
+      });
+      if (doAcs.length) filtradas = doAcs;
+    }
+
+    filtradas.sort((a, b) => dataOrdenavel(b.data) - dataOrdenavel(a.data));
 
     // Coluna "Desfecho Visita" da declaração = só o campo Desfecho do
     // e-SUS ("Visita realizada" etc.); usa o motivo apenas se o desfecho
     // vier vazio, para a linha não ficar em branco.
-    return rows.slice(0, MAX_VISITAS_DECLARACAO).map(v => ({
+    return filtradas.slice(0, MAX_VISITAS_DECLARACAO).map(v => ({
       data: v.data,
       desfecho: v.desfecho || v.motivo || ''
     }));
@@ -543,13 +609,14 @@ async function extractAllPagesData() {
   base.acs = acsResponsavel;
 
   // 2) Navega para "Últimas visitas", expande cada item e extrai só as
-  //    visitas do(a) responsável familiar (até 6, mais recentes primeiro).
+  //    visitas do(a) responsável familiar feitas pelo ACS de
+  //    "Responsabilidade de acompanhamento" (até 6, mais recentes primeiro).
   let visitas = [];
   let filtradoPorResponsavel = false;
   const tabVisitas = findTabByLabel(['Últimas visitas', 'Visitas', 'Histórico de visitas']);
   if (tabVisitas) {
     await clickTabAndWait(tabVisitas, 4000);
-    const resultado = await parseVisitas(nomeResponsavel);
+    const resultado = await parseVisitas(nomeResponsavel, acsResponsavel);
     visitas = resultado.visitas;
     filtradoPorResponsavel = resultado.filtradoPorResponsavel;
 
