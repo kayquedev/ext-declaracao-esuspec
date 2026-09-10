@@ -274,7 +274,7 @@ async function extractAllPagesData() {
     if (items.length) {
       const rows = [];
       let algumPainelComCidadao = false;
-      let algumPainelComProfissional = false;
+      let algumItemComTextoDeLinha = false;
       const orcamentoMs = 35000;
       const inicio = Date.now();
 
@@ -313,19 +313,29 @@ async function extractAllPagesData() {
           return el ? (el.textContent || '').replace(/\s+/g, ' ').trim() : '';
         };
 
-        let cidadaoVisitado = '', dataTurnoRaw = '', desfecho = '', motivo = '', profissionalVisita = '';
+        let cidadaoVisitado = '', dataTurnoRaw = '', desfecho = '', motivo = '';
         if (painel) {
           cidadaoVisitado = limpaNome(getLabeledValue(painel, ['Cidadão visitado', 'Cidadao visitado']));
           dataTurnoRaw = getLabeledValue(painel, ['Data e turno', 'Data/turno', 'Data da visita']);
           desfecho = getLabeledValue(painel, ['Desfecho', 'Desfecho da visita']);
           motivo = getLabeledValue(painel, ['Motivo da visita', 'Motivos da visita', 'Motivo']);
-          profissionalVisita = limpaNome(getLabeledValue(painel, [
-            'Profissional Responsável', 'Profissional responsavel', 'Profissional',
-            'Executado por', 'Realizado por'
-          ]));
         }
         if (cidadaoVisitado) algumPainelComCidadao = true;
-        if (profissionalVisita) algumPainelComProfissional = true;
+
+        // "Profissional Responsável" é COLUNA da própria linha da tabela —
+        // já visível mesmo sem expandir — e não um campo do painel
+        // expandido (que só traz motivos, desfecho, cidadão visitado e
+        // dados vitais). Por isso é lido do texto da linha (item),
+        // excluindo o conteúdo do painel, para não confundir com o nome
+        // do cidadão visitado (que fica dentro do painel).
+        const rowOnlyText = (() => {
+          const clone = item.cloneNode(true);
+          const painelClone = clone.querySelector('[data-accordion-component="AccordionItemPanel"]');
+          if (painelClone) painelClone.remove();
+          return (clone.textContent || '').replace(/\s+/g, ' ').trim();
+        })();
+        const rowNorm = normalizar(rowOnlyText);
+        if (rowOnlyText) algumItemComTextoDeLinha = true;
 
         const data = soData(dataTurnoRaw) || getField('dataVisita') || soData(item.textContent || '');
         const turno = soTurno(dataTurnoRaw) || soTurno(item.textContent || '');
@@ -341,15 +351,13 @@ async function extractAllPagesData() {
               (cidadaoNorm.length >= 6 && nomeNorm.includes(cidadaoNorm))
             )
           );
-          const profNorm = normalizar(profissionalVisita);
+          // O nome do ACS aparece literalmente na linha (coluna
+          // "Profissional Responsável"); basta checar se ele consta no
+          // texto da linha (já sem o painel).
           const doProfissional = !!(
-            acsNorm && profNorm && (
-              profNorm === acsNorm ||
-              (acsNorm.length >= 6 && profNorm.includes(acsNorm)) ||
-              (profNorm.length >= 6 && acsNorm.includes(profNorm))
-            )
+            acsNorm && rowNorm && acsNorm.length >= 6 && rowNorm.includes(acsNorm)
           );
-          rows.push({ data, turno, desfecho, motivo, cidadaoVisitado, doResponsavel, profissionalVisita, doProfissional });
+          rows.push({ data, turno, desfecho, motivo, cidadaoVisitado, doResponsavel, doProfissional });
         }
       }
 
@@ -393,10 +401,9 @@ async function extractAllPagesData() {
         // ACS de "Responsabilidade de acompanhamento": a aba "Últimas
         // visitas" traz visitas de outros profissionais, mas a declaração
         // deve trazer só as realizadas pelo ACS daquela família. Só aplica
-        // se conseguimos ler o profissional em algum painel e ele reduzir
-        // a lista sem zerá-la (senão mantém o filtro anterior, avisando
-        // para conferir).
-        if (algumPainelComProfissional && acsNorm) {
+        // se conseguimos ler o texto da linha e ele reduzir a lista sem
+        // zerá-la (senão mantém o filtro anterior, avisando para conferir).
+        if (algumItemComTextoDeLinha && acsNorm) {
           const doAcs = doResp.filter(r => r.doProfissional);
           if (doAcs.length) doResp = doAcs;
         }
