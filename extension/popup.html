@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>Declaração de Endereço</title>
+<link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>Declaração de Endereço</h1>
+    <p class="subtitle">Extrai os dados visíveis na tela do e-SUS e gera o PDF da declaração.</p>
+    <div id="finalizadoBadge" class="finalizado-badge" role="status" hidden>
+      ✓ DECLARAÇÃO DE ENDEREÇO FINALIZADA
+    </div>
+  </header>
+
+  <div class="extract-bar">
+    <button id="btnExtract" type="button" class="btn btn-primary">🔍 Extrair dados da página atual</button>
+    <span id="extractStatus" class="status"></span>
+  </div>
+  <p class="hint">Um clique em <strong>Extrair</strong> já navega sozinho entre "Famílias e
+    moradores" e "Últimas visitas" e traz os dois. Se o e-SUS mudar de layout e a
+    navegação automática falhar, abra a página que faltou manualmente e clique em
+    Extrair de novo — os dados são somados, nunca apagados.</p>
+
+  <form id="declForm">
+
+    <fieldset>
+      <legend>Unidade / Equipe <button type="button" id="btnSaveDefaults" class="btn-link">salvar como padrão</button></legend>
+      <div class="grid-2">
+        <label>Prefeitura Municipal de
+          <input type="text" id="prefeitura" value="São Gonçalo do Pará" />
+        </label>
+        <label>UF
+          <input type="text" id="prefeituraUf" maxlength="2" value="MG" />
+        </label>
+        <label>CNPJ
+          <input type="text" id="cnpj" value="18.291.369/0001-66" />
+        </label>
+        <label>Secretaria
+          <input type="text" id="secretaria" value="Secretaria Municipal de Saúde" />
+        </label>
+        <label class="col-span-2">Endereço da Secretaria
+          <input type="text" id="secretariaEndereco" value="Av. Presidente Tancredo Neves, n 473 – Centro" />
+        </label>
+        <label class="col-span-2">Nome da UBS
+          <input type="text" id="ubs" value="UBS CENTRAL" />
+        </label>
+        <label>Agente Comunitário(a) de Saúde
+          <input type="text" id="acs" placeholder="Nome do ACS" />
+        </label>
+        <label>Enfermeiro(a) Coordenador(a)
+          <input type="text" id="coordenador" value="Maryana Vieira Rodrigues" />
+        </label>
+        <label>Registro (COREN)
+          <input type="text" id="coordenadorRegistro" value="COREN-MG: 810320-ENF" />
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Usuário(a) da declaração</legend>
+      <div class="grid-2">
+        <label class="col-span-2">Membro extraído (selecione quem será o(a) declarante)
+          <select id="primaryMemberSelect"><option value="">— extraia os dados primeiro —</option></select>
+        </label>
+        <label>Nome completo
+          <input type="text" id="usuarioNome" required />
+        </label>
+        <label>CPF
+          <input type="text" id="usuarioCpf" placeholder="000.000.000-00" />
+        </label>
+        <label>CNS
+          <input type="text" id="usuarioCns" placeholder="000000000000000" />
+        </label>
+        <label>Microárea
+          <input type="text" id="microarea" />
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Endereço</legend>
+      <div class="grid-2">
+        <label class="col-span-2">Logradouro
+          <input type="text" id="logradouro" placeholder="Rua/Av." />
+        </label>
+        <label>Número
+          <input type="text" id="numero" />
+        </label>
+        <label>Complemento
+          <input type="text" id="complemento" />
+        </label>
+        <label>Bairro
+          <input type="text" id="bairro" />
+        </label>
+        <label>Cidade
+          <input type="text" id="cidade" />
+        </label>
+        <label>UF
+          <input type="text" id="uf" maxlength="2" />
+        </label>
+        <label>CEP
+          <input type="text" id="cep" />
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Também residem neste endereço
+        <button type="button" id="btnAddMorador" class="btn-link">+ adicionar linha</button>
+      </legend>
+      <table class="dyn-table" id="moradoresTable">
+        <thead>
+          <tr><th>Nome Completo</th><th>Nº do Documento (CPF/CNS)</th><th>Relação de Parentesco</th><th></th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </fieldset>
+
+    <fieldset>
+      <legend>Últimas visitas realizadas à família
+        <button type="button" id="btnAddVisita" class="btn-link">+ adicionar linha</button>
+      </legend>
+      <p class="hint">Traz somente as visitas feitas ao(à) <strong>responsável familiar</strong> (até 3, da mais recente para a mais antiga), identificado pelo campo "Cidadão visitado" ao expandir cada visita. Visitas repetidas no mesmo dia e turno para o mesmo cidadão contam como uma só. Quando o e-SUS não expõe esse campo, mostra as visitas do imóvel sem filtrar e avisa na mensagem de status — confira nesse caso.</p>
+      <table class="dyn-table" id="visitasTable">
+        <thead>
+          <tr><th>Data da Visita</th><th>Desfecho Visita</th><th></th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </fieldset>
+
+    <fieldset>
+      <legend>Fechamento</legend>
+      <div class="grid-2">
+        <label>Cidade da declaração
+          <input type="text" id="cidadeDeclaracao" />
+        </label>
+        <label>UF
+          <input type="text" id="ufDeclaracao" maxlength="2" />
+        </label>
+        <label class="col-span-2">Data
+          <input type="date" id="dataDeclaracao" />
+        </label>
+      </div>
+    </fieldset>
+
+    <div class="actions">
+      <button type="submit" class="btn btn-primary btn-large">📄 Gerar PDF</button>
+    </div>
+  </form>
+
+  <script src="lib/jspdf.umd.min.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

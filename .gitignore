@@ -1,0 +1,15 @@
+# Pasta de trabalho/rascunho — PDFs de teste podem conter dados reais de
+# cidadãos (nome, CPF, CNS). Nunca versionar em repositório público.
+Claude outputs/
+*.pdf
+
+# Sistema operacional / editores
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Node (caso venha a ser usado no build)
+node_modules/
+npm-debug.log*

@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "Declaração de Endereço - e-SUS",
+  "version": "1.0.0",
+  "description": "Extrai os dados exibidos na tela do e-SUS (imóvel e família) e gera a Declaração de Endereço do núcleo familiar em PDF. Nada é lido de banco de dados: apenas o que está visível na página.",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Gerar Declaração de Endereço"
+  }
+}
