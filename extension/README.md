@@ -94,12 +94,12 @@ espaço nenhum** ao colar (o conteúdo fica todo grudado) — só `<strong>`/`<b
 (negrito), `<i>`/`<u>` (itálico/sublinhado), `<ul>`/`<li>` (lista, com o marcador
 "*" que o próprio campo desenha) e emoji/Unicode colam certo. O espaçamento entre
 blocos só funciona de um jeito: `<br>` repetido dentro de um único parágrafo. Por
-isso o texto usa `<p>` com sequências de `<br>` para controlar o espaçamento (1
-`<br>` desce a linha do título para o texto logo abaixo; 2 `<br>` abrem uma linha
-em branco entre seções; 4 `<br>` abrem três linhas em branco antes da linha de
-assinatura), e a lista de moradores e de visitas fica em blocos `<ul>` à parte
-(um `<ul>` não pode ficar dentro de um `<p>`) — a própria troca de bloco já desce
-a linha, sem precisar de `<br>` extra ali. Tamanho de fonte, cor/destaque, `<img>`
+isso o texto usa `<p>` com `<br>` controlando cada quebra: 1 `<br>` bem no início
+(antes até do primeiro título) e 1 `<br>` em cada transição título ⇄ conteúdo ⇄
+próximo título; antes da linha de assinatura são 3 `<br>` seguidos. A lista de
+moradores e de visitas fica em blocos `<ul>` à parte (um `<ul>` não pode ficar
+dentro de um `<p>`) — a própria troca de bloco já desce a linha, sem precisar de
+`<br>` extra ali. Tamanho de fonte, cor/destaque, `<img>`
 (cola a URL da imagem como texto gigante) e `<table>` não sobrevivem ao colar e
 não são usados. Não traz o cabeçalho da prefeitura
 (a aba já imprime o próprio timbre), nem a data (a aba já gera a data automático

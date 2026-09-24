@@ -1270,23 +1270,20 @@ function buildOrientacoesConteudo(d) {
     ? `<p><strong>${escapeHtml(visitasLinhas[0])}</strong></p>`
     : `<ul>${visitasLinhas.map(l => `<li>${escapeHtml(l)}</li>`).join('')}</ul>`;
 
-  // Unidade de espaçamento: 1 <br> só desce a linha (título -> conteúdo
-  // logo abaixo), 2 <br> abrem uma linha em branco (separação entre
-  // seções) e 4 <br> abrem três linhas em branco (respiro antes da
-  // assinatura). <ul>/<li> não pode ficar dentro de <p>, então cada lista
-  // é o seu próprio bloco entre dois <p> — a troca de bloco já desce a
-  // linha sozinha (sem gerar espaço extra), e quem abre a linha em branco
-  // antes do próximo título é o <br><br> no início do <p> seguinte.
+  // Cada quebra é 1 <br>: 1 antes do primeiro título, 1 entre título e
+  // conteúdo logo abaixo, 1 antes de cada novo título/frase seguinte, e 3
+  // seguidos antes da linha de assinatura. <ul>/<li> não pode ficar dentro
+  // de <p>, então cada lista é o seu próprio bloco entre dois <p>.
   const ESP1 = '<br>';
-  const ESP2 = '<br><br>';
-  const ESP4 = '<br><br><br><br>';
+  const ESP3 = '<br><br><br>';
 
   const html = [
-    `<p><strong>DECLARAÇÃO DE ENDEREÇO</strong>${ESP1}${escapeHtml(paragrafo)}${ESP2}<strong>Também residem neste endereço, os seguintes moradores:</strong></p>`,
+    '<br>',
+    `<p><strong>DECLARAÇÃO DE ENDEREÇO</strong>${ESP1}${escapeHtml(paragrafo)}${ESP1}<strong>Também residem neste endereço, os seguintes moradores:</strong></p>`,
     moradoresBloco,
-    `<p>${ESP2}<strong>Últimas visitas realizadas à família:</strong></p>`,
+    `<p>${ESP1}<strong>Últimas visitas realizadas à família:</strong></p>`,
     visitasBloco,
-    `<p>${ESP2}Para clareza e por ser verdade, firmo a presente declaração.${ESP4}________________________________${ESP1}${escapeHtml(acsTexto)}</p>`
+    `<p>${ESP1}Para clareza e por ser verdade, firmo a presente declaração.${ESP3}________________________________${ESP1}${escapeHtml(acsTexto)}</p>`
   ].join('\n');
 
   // Texto simples: só o fallback de último caso, se o navegador não
