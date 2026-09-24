@@ -1413,7 +1413,9 @@ async function handleCopyOrientacoes() {
 
 document.addEventListener('DOMContentLoaded', () => {
   loadDefaults();
-  loadLogo(); // começa a carregar o brasão em segundo plano, antes de precisar dele no PDF
+  // loadLogo() não é mais pré-carregado aqui: só servia para adiantar o
+  // brasão antes do botão "Gerar PDF" (removido da interface). A própria
+  // generatePdf() já chama loadLogo() quando precisar, via logoPromise.
   $('dataDeclaracao').value = new Date().toISOString().slice(0, 10);
   addVisitaRow();
   addVisitaRow();
