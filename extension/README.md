@@ -91,14 +91,17 @@ disponível, para quando o PDF avulso for realmente necessário.
 O texto copiado vai como HTML de verdade (a aba Orientações é um campo de texto
 rico), mas testado manualmente contra o campo real: `<p>` separados **não geram
 espaço nenhum** ao colar (o conteúdo fica todo grudado) — só `<strong>`/`<b>`
-(negrito), `<i>`/`<u>` (itálico/sublinhado), `<ul>`/`<li>` (lista) e emoji/Unicode
-colam certo. O espaçamento entre blocos só funciona de um jeito: `<br>` repetido
-dentro de um único parágrafo. Por isso o texto inteiro vai como um `<p>` só, com
-sequências de `<br>` controlando cada espaçamento (1 `<br>` desce a linha do
-título para o texto logo abaixo; 2 `<br>` abrem uma linha em branco entre seções;
-3 `<br>` abrem duas linhas em branco antes da linha de assinatura). Tamanho de
-fonte, cor/destaque, `<img>` (cola a URL da imagem como texto gigante) e `<table>`
-não sobrevivem ao colar e não são usados. Não traz o cabeçalho da prefeitura
+(negrito), `<i>`/`<u>` (itálico/sublinhado), `<ul>`/`<li>` (lista, com o marcador
+"*" que o próprio campo desenha) e emoji/Unicode colam certo. O espaçamento entre
+blocos só funciona de um jeito: `<br>` repetido dentro de um único parágrafo. Por
+isso o texto usa `<p>` com sequências de `<br>` para controlar o espaçamento (1
+`<br>` desce a linha do título para o texto logo abaixo; 2 `<br>` abrem uma linha
+em branco entre seções; 4 `<br>` abrem três linhas em branco antes da linha de
+assinatura), e a lista de moradores e de visitas fica em blocos `<ul>` à parte
+(um `<ul>` não pode ficar dentro de um `<p>`) — a própria troca de bloco já desce
+a linha, sem precisar de `<br>` extra ali. Tamanho de fonte, cor/destaque, `<img>`
+(cola a URL da imagem como texto gigante) e `<table>` não sobrevivem ao colar e
+não são usados. Não traz o cabeçalho da prefeitura
 (a aba já imprime o próprio timbre), nem a data (a aba já gera a data automático
 ao salvar), nem a assinatura do(a) enfermeiro(a) — a aba assina sozinha com o
 profissional logado ao salvar — por isso só entra a linha `ACS <nome>` no final.
