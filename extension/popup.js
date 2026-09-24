@@ -6,6 +6,15 @@ const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho',
 const LOGO_PATH = 'icons/logo_prefeitura.png';
 // Máximo de visitas à família mostradas na declaração (mais recentes primeiro).
 const MAX_VISITAS_EXTRAIDAS = 3;
+// Cabeçalho fixo do PDF, no padrão da Secretaria Municipal de Saúde.
+const CABECALHO = {
+  prefeitura: 'PREFEITURA MUNICIPAL DE SÃO GONÇALO DO PARÁ – MG',
+  cnpj: 'CNPJ: 18.291.369/0001-66',
+  secretaria: 'Secretaria Municipal de Saúde',
+  endereco: 'Av. Presidente Tancredo Neves, n 473 – Centro'
+};
+// Campos da unidade que o "salvar como padrão" guarda.
+const CAMPOS_PADRAO = ['ubs', 'cnesUbs', 'acs', 'coordenador', 'coordenadorRegistro'];
 
 const state = {
   members: [] // dados extraídos da página: [{nome, sexo, familia, responsavel, cns, cpf, parentesco}]
@@ -634,6 +643,9 @@ async function extractAllPagesData() {
 
   base.visitas = visitas;
   base.filtradoPorResponsavel = filtradoPorResponsavel;
+  // Distingue "a aba foi lida e não há visitas" de "não conseguiu chegar
+  // na aba" — só no primeiro caso o popup limpa a tabela de visitas.
+  base.abaVisitasLida = !!tabVisitas;
   return base;
 }
 
@@ -713,9 +725,18 @@ function clearTable(tableId) {
 
 /* --------------------------- extração ------------------------------ */
 
+// Durante a extração some o botão Extrair e aparece o aviso vermelho para
+// o usuário não mexer no e-SUS enquanto a extensão navega entre as abas.
+function setExtraindo(ativo) {
+  $('btnExtract').hidden = ativo;
+  $('btnExtract').disabled = ativo;
+  $('extractingBox').hidden = !ativo;
+}
+
 async function handleExtract() {
   setFinalizado(false);
-  setStatus('Extraindo dados… a extensão navega sozinha entre "Informações cadastrais", "Famílias e moradores" e "Últimas visitas", isso pode levar alguns segundos.');
+  setStatus('');
+  setExtraindo(true);
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab || !tab.id) throw new Error('Nenhuma aba ativa encontrada.');
@@ -777,18 +798,22 @@ async function handleExtract() {
     // Visitas: lidas da tabela de "Últimas visitas" do imóvel (até 6, mais
     // recentes primeiro). Só substitui a tabela se algo foi encontrado,
     // para não apagar entradas manuais existentes.
+    // Se a aba foi lida e não há visitas, esvazia a tabela: o PDF então
+    // imprime o aviso de que não existem visitas ao responsável familiar.
     if (foundVisitas) {
       clearTable('visitasTable');
       visitas.forEach(v => addVisitaRow([v.data || '', v.desfecho || '']));
-    } else if (!document.querySelector('#visitasTable tbody').children.length) {
-      addVisitaRow();
-      addVisitaRow();
+    } else if (data.abaVisitasLida) {
+      clearTable('visitasTable');
     }
 
     const parts = [];
     if (foundAddress) parts.push('endereço');
     if (foundAcs) parts.push(`ACS ${data.acs.trim()}`);
     if (foundMembers) parts.push(`${state.members.length} morador(es)`);
+    if (!foundVisitas && data.abaVisitasLida) {
+      parts.push('nenhuma visita ao responsável familiar (o PDF trará o aviso)');
+    }
     if (foundVisitas) {
       parts.push(data.filtradoPorResponsavel
         ? `${visitas.length} visita(s) do(a) responsável familiar`
@@ -809,6 +834,8 @@ async function handleExtract() {
     console.error(err);
     setFinalizado(false);
     setStatus('Erro ao extrair: ' + err.message + '. Verifique se a página do e-SUS está aberta na aba ativa.', true);
+  } finally {
+    setExtraindo(false);
   }
 }
 
@@ -972,6 +999,29 @@ function drawTable(doc, x, y, width, headers, rows, colRatios, minRows) {
   return y;
 }
 
+// Campos derivados dos dados do formulário, comuns ao PDF e ao texto da
+// aba "Orientações": endereço completo, documento, UBS (com CNES) e as
+// linhas já filtradas de moradores/visitas.
+function prepararDeclaracao(d) {
+  const enderecoPrincipal = [d.logradouro, d.numero ? `nº ${d.numero}` : ''].filter(Boolean).join(', ');
+  const complBairro = [d.complemento, d.bairro].filter(Boolean).join(', ');
+  const cidadeUf = [d.cidade, d.uf].filter(Boolean).join('/');
+  const enderecoCompleto = [enderecoPrincipal, complBairro, cidadeUf].filter(Boolean).join(', ');
+
+  let docLabel = '';
+  if (d.usuarioCpf && d.usuarioCns) docLabel = `CPF ${d.usuarioCpf} / CNS ${d.usuarioCns}`;
+  else if (d.usuarioCpf) docLabel = `CPF ${d.usuarioCpf}`;
+  else if (d.usuarioCns) docLabel = `CNS ${d.usuarioCns}`;
+
+  // "UBS CENTRAL (CNES 1234567)" — os parênteses só entram se o CNES foi preenchido.
+  const ubsTexto = d.ubs ? `${d.ubs}${d.cnesUbs ? ` (CNES ${d.cnesUbs})` : ''}` : '';
+  const moradoresPreenchidos = d.moradores.filter(r => r.some(v => v));
+  const visitas = d.visitas.filter(r => r.some(v => v));
+  const local = [d.cidadeDeclaracao, d.ufDeclaracao].filter(Boolean).join(', ');
+
+  return { enderecoCompleto, docLabel, secretariaNome: CABECALHO.secretaria, ubsTexto, moradoresPreenchidos, visitas, local };
+}
+
 async function generatePdf(d) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
@@ -988,16 +1038,15 @@ async function generatePdf(d) {
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
-  const prefTitle = `PREFEITURA MUNICIPAL DE ${(d.prefeitura || '').toUpperCase()}` +
-    (d.prefeituraUf ? ` – ${d.prefeituraUf.toUpperCase()}` : '');
-  doc.text(prefTitle, pageWidth / 2, y, { align: 'center' });
+  doc.text(CABECALHO.prefeitura, pageWidth / 2, y, { align: 'center' });
   y += 5.5;
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10.5);
-  if (d.cnpj) { doc.text(`CNPJ: ${d.cnpj}`, pageWidth / 2, y, { align: 'center' }); y += 5; }
-  if (d.secretaria) { doc.text(d.secretaria, pageWidth / 2, y, { align: 'center' }); y += 5; }
-  if (d.secretariaEndereco) { doc.text(d.secretariaEndereco, pageWidth / 2, y, { align: 'center' }); y += 5; }
+  [CABECALHO.cnpj, CABECALHO.secretaria, CABECALHO.endereco].forEach(t => {
+    doc.text(t, pageWidth / 2, y, { align: 'center' });
+    y += 5;
+  });
 
   y += 8;
   doc.setFont('helvetica', 'bold');
@@ -1005,17 +1054,7 @@ async function generatePdf(d) {
   doc.text('DECLARAÇÃO DE ENDEREÇO', pageWidth / 2, y, { align: 'center' });
   y += 12;
 
-  const enderecoPrincipal = [d.logradouro, d.numero ? `nº ${d.numero}` : ''].filter(Boolean).join(', ');
-  const complBairro = [d.complemento, d.bairro].filter(Boolean).join(', ');
-  const cidadeUf = [d.cidade, d.uf].filter(Boolean).join('/');
-  const enderecoCompleto = [enderecoPrincipal, complBairro, cidadeUf].filter(Boolean).join(', ');
-
-  let docLabel = '';
-  if (d.usuarioCpf && d.usuarioCns) docLabel = `CPF ${d.usuarioCpf} / CNS ${d.usuarioCns}`;
-  else if (d.usuarioCpf) docLabel = `CPF ${d.usuarioCpf}`;
-  else if (d.usuarioCns) docLabel = `CNS ${d.usuarioCns}`;
-
-  const secretariaNome = d.secretaria || 'Secretaria Municipal de Saúde';
+  const { enderecoCompleto, docLabel, secretariaNome, ubsTexto, moradoresPreenchidos, visitas, local } = prepararDeclaracao(d);
 
   // Texto no mesmo formato do modelo oficial: "Declaro, para os devidos
   // fins, junto à [Secretaria], que o(a) usuário [NOME], CPF/CNS [DOC],
@@ -1028,7 +1067,7 @@ async function generatePdf(d) {
     { text: ` ${d.usuarioNome}`, bold: true },
     docLabel ? { text: `, ${docLabel},` } : { text: ',' },
     { text: ` reside à ${enderecoCompleto}. O endereço acima citado é de abrangência da Unidade Básica de Saúde da` },
-    d.ubs ? { text: ` ${d.ubs}`, bold: true } : null,
+    ubsTexto ? { text: ` ${ubsTexto}`, bold: true } : null,
     { text: ` e o(a) morador(a) é usuário(a) do serviço aqui prestado, e acompanhado pelo Agente Comunitário de Saúde` },
     d.acs ? { text: ` ${d.acs}`, bold: true } : null,
     { text: `${d.microarea ? ', Microárea ' + d.microarea : ''}.` }
@@ -1041,7 +1080,6 @@ async function generatePdf(d) {
   doc.setFontSize(11);
   doc.text('Também residem neste endereço, os seguintes moradores:', marginX, y);
   y += 4;
-  const moradoresPreenchidos = d.moradores.filter(r => r.some(v => v));
   if (moradoresPreenchidos.length === 0) {
     // Sem mais nenhum morador além do responsável familiar: não desenha a
     // tabela de 3 colunas (Nome/Documento/Parentesco), só o aviso.
@@ -1063,18 +1101,27 @@ async function generatePdf(d) {
 
   doc.text('Últimas visitas realizadas à família:', marginX, y);
   y += 4;
-  const visitas = d.visitas.filter(r => r.some(v => v));
-  y = drawTable(
-    doc, marginX, y, maxWidth,
-    ['Data da Visita', 'Desfecho Visita'],
-    visitas, [0.28, 0.72], 3
-  );
+  if (visitas.length === 0) {
+    // Nenhuma visita ao responsável familiar: não desenha a tabela, só o
+    // aviso (mesmo tratamento da tabela de moradores).
+    doc.setFont('helvetica', 'bold');
+    doc.text('NÃO EXISTEM REGISTROS DE VISITAS AO RESPONSÁVEL FAMILIAR NESTE ENDEREÇO', marginX, y, { maxWidth });
+    doc.setFont('helvetica', 'normal');
+    y += 6;
+  } else {
+    // minRows = quantidade real de visitas (até 3), para nunca sobrar linha
+    // em branco na tabela.
+    y = drawTable(
+      doc, marginX, y, maxWidth,
+      ['Data da Visita', 'Desfecho Visita'],
+      visitas, [0.28, 0.72], visitas.length
+    );
+  }
   y += 10;
 
   doc.setFontSize(11);
   doc.text('Para clareza e por ser verdade, firmo a presente declaração.', marginX, y);
   y += 10;
-  const local = [d.cidadeDeclaracao, d.ufDeclaracao].filter(Boolean).join(', ');
   doc.text(`${local}, ${d.dataExtenso}.`, marginX, y);
   y += 22;
 
@@ -1084,10 +1131,14 @@ async function generatePdf(d) {
   doc.line(marginX + sigWidth + gap, y, marginX + sigWidth * 2 + gap, y);
   y += 5;
   doc.setFontSize(9.5);
-  doc.text(d.acs ? `ACS ${d.acs}` : 'ACS responsável pela microárea', marginX + sigWidth / 2, y, { align: 'center' });
+  doc.text(d.acs ? `ACS ${d.acs}` : 'ACS Responsável', marginX + sigWidth / 2, y, { align: 'center' });
   const coordX = marginX + sigWidth + gap + sigWidth / 2;
-  doc.text(d.coordenador || 'Enfermeiro(a) e Coordenador(a)', coordX, y, { align: 'center' });
-  if (d.coordenadorRegistro) doc.text(d.coordenadorRegistro, coordX, y + 4, { align: 'center' });
+  // Por padrão (nome e COREN em branco) imprime só o cargo, para o nome e o
+  // COREN serem preenchidos à mão/carimbo. Se preenchidos no popup, entram
+  // abaixo do cargo.
+  doc.text('Enfermeiro(a) e Coordenador(a) da Unidade', coordX, y, { align: 'center' });
+  const coordLinhas = [d.coordenador, d.coordenadorRegistro].filter(Boolean);
+  coordLinhas.forEach((t, i) => doc.text(t, coordX, y + 4 * (i + 1), { align: 'center' }));
 
   doc.save(`Declaracao_Endereco_${slug(d.usuarioNome)}.pdf`);
 }
@@ -1098,32 +1149,26 @@ async function loadDefaults() {
   const stored = await chrome.storage.local.get(DEFAULTS_KEY);
   const def = stored[DEFAULTS_KEY];
   if (!def) return;
-  ['prefeitura', 'prefeituraUf', 'cnpj', 'secretaria', 'secretariaEndereco', 'ubs', 'acs', 'coordenador', 'coordenadorRegistro']
-    .forEach(id => { if (def[id]) $(id).value = def[id]; });
+  // Nome/COREN da enfermeira que vinham fixos em versões anteriores: se
+  // ficaram salvos como padrão, descarta para o campo voltar em branco.
+  if (/^maryana vieira rodrigues$/i.test(def.coordenador || '')) def.coordenador = '';
+  if (/810320/.test(def.coordenadorRegistro || '')) def.coordenadorRegistro = '';
+  CAMPOS_PADRAO.forEach(id => { if (def[id]) $(id).value = def[id]; });
 }
 
 async function saveDefaults() {
   const def = {};
-  ['prefeitura', 'prefeituraUf', 'cnpj', 'secretaria', 'secretariaEndereco', 'ubs', 'acs', 'coordenador', 'coordenadorRegistro']
-    .forEach(id => { def[id] = $(id).value.trim(); });
+  CAMPOS_PADRAO.forEach(id => { def[id] = $(id).value.trim(); });
   await chrome.storage.local.set({ [DEFAULTS_KEY]: def });
   setStatus('Padrões da unidade salvos para as próximas declarações.');
 }
 
-async function onSubmit(ev) {
-  ev.preventDefault();
-  if (!$('usuarioNome').value.trim()) {
-    setStatus('Informe o nome do(a) usuário(a) da declaração.', true);
-    $('usuarioNome').focus();
-    return;
-  }
-  const data = {
-    prefeitura: $('prefeitura').value.trim(),
-    prefeituraUf: $('prefeituraUf').value.trim(),
-    cnpj: $('cnpj').value.trim(),
-    secretaria: $('secretaria').value.trim(),
-    secretariaEndereco: $('secretariaEndereco').value.trim(),
+// Lê todos os campos do formulário (usado tanto para o PDF quanto para o
+// texto copiado para "Orientações").
+function collectFormData() {
+  return {
     ubs: $('ubs').value.trim(),
+    cnesUbs: $('cnesUbs').value.trim(),
     acs: $('acs').value.trim(),
     coordenador: $('coordenador').value.trim(),
     coordenadorRegistro: $('coordenadorRegistro').value.trim(),
@@ -1144,12 +1189,26 @@ async function onSubmit(ev) {
     ufDeclaracao: $('ufDeclaracao').value.trim(),
     dataExtenso: dateExtenso($('dataDeclaracao').value)
   };
+}
 
-  if (!data.dataExtenso) {
-    setStatus('Informe a data da declaração.', true);
-    return;
+// Validação mínima comum ao gerar PDF e ao copiar para "Orientações".
+function validarFormulario() {
+  if (!$('usuarioNome').value.trim()) {
+    setStatus('Informe o nome do(a) usuário(a) da declaração.', true);
+    $('usuarioNome').focus();
+    return false;
   }
+  if (!dateExtenso($('dataDeclaracao').value)) {
+    setStatus('Informe a data da declaração.', true);
+    return false;
+  }
+  return true;
+}
 
+async function onSubmit(ev) {
+  ev.preventDefault();
+  if (!validarFormulario()) return;
+  const data = collectFormData();
   try {
     setStatus('Gerando PDF…');
     await generatePdf(data);
@@ -1157,6 +1216,145 @@ async function onSubmit(ev) {
   } catch (err) {
     console.error(err);
     setStatus('Erro ao gerar o PDF: ' + err.message, true);
+  }
+}
+
+/* --------------------- texto para a aba "Orientações" ---------------- */
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+// Monta o mesmo texto da declaração em duas versões: HTML (com negrito e
+// quebras de linha, para colar direto na aba "Orientações" do e-SUS, que
+// é um campo de texto rico) e texto simples (fallback). Não traz a
+// assinatura do(a) enfermeiro(a): a aba "Orientações" já assina
+// automaticamente com o profissional logado ao salvar — só o ACS precisa
+// vir no texto.
+function buildOrientacoesConteudo(d) {
+  const p = prepararDeclaracao(d);
+  const acsTexto = d.acs ? `ACS ${d.acs}` : 'ACS Responsável';
+  const docTexto = p.docLabel ? `, ${p.docLabel},` : ',';
+  const acsFraseTexto = d.acs ? ` ${d.acs}` : '';
+  const microareaTexto = d.microarea ? `, Microárea ${d.microarea}` : '';
+
+  const moradoresLinhasTexto = p.moradoresPreenchidos.length === 0
+    ? ['NÃO RESIDE MAIS NENHUM MORADOR']
+    : p.moradoresPreenchidos.map(m => [m[0], m[1], m[2]].filter(Boolean).join(' — '));
+
+  const visitasLinhasTexto = p.visitas.length === 0
+    ? ['NÃO EXISTEM REGISTROS DE VISITAS AO RESPONSÁVEL FAMILIAR NESTE ENDEREÇO']
+    : p.visitas.map(v => [v[0], v[1]].filter(Boolean).join(' — '));
+
+  const text = [
+    CABECALHO.prefeitura,
+    CABECALHO.cnpj,
+    CABECALHO.secretaria,
+    CABECALHO.endereco,
+    '',
+    'DECLARAÇÃO DE ENDEREÇO',
+    '',
+    `Declaro, para os devidos fins, junto à ${p.secretariaNome}, que o(a) usuário ${d.usuarioNome}${docTexto} reside à ${p.enderecoCompleto}. ` +
+      `O endereço acima citado é de abrangência da Unidade Básica de Saúde da ${p.ubsTexto} e o(a) morador(a) é usuário(a) do serviço aqui prestado, ` +
+      `e acompanhado pelo Agente Comunitário de Saúde${acsFraseTexto}${microareaTexto}.`,
+    '',
+    'Também residem neste endereço, os seguintes moradores:',
+    ...moradoresLinhasTexto,
+    '',
+    'Últimas visitas realizadas à família:',
+    ...visitasLinhasTexto,
+    '',
+    'Para clareza e por ser verdade, firmo a presente declaração.',
+    `${p.local}, ${d.dataExtenso}.`,
+    '',
+    acsTexto
+  ].join('\n');
+
+  const moradoresHtml = p.moradoresPreenchidos.length === 0
+    ? '<strong>NÃO RESIDE MAIS NENHUM MORADOR</strong>'
+    : p.moradoresPreenchidos.map(m => escapeHtml([m[0], m[1], m[2]].filter(Boolean).join(' — '))).join('<br>');
+
+  const visitasHtml = p.visitas.length === 0
+    ? '<strong>NÃO EXISTEM REGISTROS DE VISITAS AO RESPONSÁVEL FAMILIAR NESTE ENDEREÇO</strong>'
+    : p.visitas.map(v => escapeHtml([v[0], v[1]].filter(Boolean).join(' — '))).join('<br>');
+
+  const html = [
+    `<p><strong>${escapeHtml(CABECALHO.prefeitura)}</strong><br>`,
+    `${escapeHtml(CABECALHO.cnpj)}<br>`,
+    `${escapeHtml(CABECALHO.secretaria)}<br>`,
+    `${escapeHtml(CABECALHO.endereco)}</p>`,
+    `<p style="text-align:center"><strong>DECLARAÇÃO DE ENDEREÇO</strong></p>`,
+    `<p>Declaro, para os devidos fins, junto à ${escapeHtml(p.secretariaNome)}, que o(a) usuário <strong>${escapeHtml(d.usuarioNome)}</strong>${p.docLabel ? `, ${escapeHtml(p.docLabel)},` : ','} ` +
+      `reside à ${escapeHtml(p.enderecoCompleto)}. O endereço acima citado é de abrangência da Unidade Básica de Saúde da <strong>${escapeHtml(p.ubsTexto)}</strong> ` +
+      `e o(a) morador(a) é usuário(a) do serviço aqui prestado, e acompanhado pelo Agente Comunitário de Saúde${d.acs ? ` <strong>${escapeHtml(d.acs)}</strong>` : ''}${escapeHtml(microareaTexto)}.</p>`,
+    `<p>Também residem neste endereço, os seguintes moradores:<br>${moradoresHtml}</p>`,
+    `<p>Últimas visitas realizadas à família:<br>${visitasHtml}</p>`,
+    `<p>Para clareza e por ser verdade, firmo a presente declaração.<br>${escapeHtml(p.local)}, ${escapeHtml(d.dataExtenso)}.</p>`,
+    `<p>${escapeHtml(acsTexto)}</p>`
+  ].join('\n');
+
+  return { html, text };
+}
+
+// Copia HTML (com fallback para texto simples) selecionando um elemento
+// oculto e usando execCommand('copy'). Funciona em mais contextos que a
+// Clipboard API moderna (que em alguns popups de extensão é bloqueada por
+// política do navegador mesmo com o clique do usuário).
+function copyRichHtmlViaSelecao(html) {
+  const container = document.createElement('div');
+  container.innerHTML = html;
+  container.style.position = 'fixed';
+  container.style.left = '-9999px';
+  container.setAttribute('contenteditable', 'true');
+  document.body.appendChild(container);
+
+  const range = document.createRange();
+  range.selectNodeContents(container);
+  const selection = window.getSelection();
+  selection.removeAllRanges();
+  selection.addRange(range);
+
+  const ok = document.execCommand('copy');
+  selection.removeAllRanges();
+  document.body.removeChild(container);
+  if (!ok) throw new Error('execCommand("copy") não foi aceito pelo navegador.');
+}
+
+async function copyRichHtml(html, text) {
+  if (navigator.clipboard && window.ClipboardItem) {
+    try {
+      const item = new ClipboardItem({
+        'text/html': new Blob([html], { type: 'text/html' }),
+        'text/plain': new Blob([text], { type: 'text/plain' })
+      });
+      await navigator.clipboard.write([item]);
+      return;
+    } catch (err) {
+      // Segue para o fallback abaixo (ex.: "Document is not focused" ou
+      // permissão de clipboard bloqueada pela política do navegador).
+      console.warn('Clipboard API falhou, tentando fallback via seleção:', err);
+    }
+  }
+  try {
+    copyRichHtmlViaSelecao(html);
+  } catch (err) {
+    console.warn('Fallback via seleção falhou, copiando só texto simples:', err);
+    await navigator.clipboard.writeText(text);
+  }
+}
+
+async function handleCopyOrientacoes() {
+  if (!validarFormulario()) return;
+  const data = collectFormData();
+  try {
+    const { html, text } = buildOrientacoesConteudo(data);
+    await copyRichHtml(html, text);
+    setStatus('Texto copiado — cole (Ctrl+V) na aba "Orientações" do prontuário no e-SUS.');
+  } catch (err) {
+    console.error(err);
+    setStatus('Erro ao copiar: ' + err.message, true);
   }
 }
 
@@ -1173,4 +1371,5 @@ document.addEventListener('DOMContentLoaded', () => {
   $('btnAddVisita').addEventListener('click', () => addVisitaRow());
   $('primaryMemberSelect').addEventListener('change', applyPrimaryMember);
   $('declForm').addEventListener('submit', onSubmit);
+  $('btnCopyOrientacoes').addEventListener('click', handleCopyOrientacoes);
 });

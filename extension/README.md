@@ -41,9 +41,13 @@ entre as duas com um único clique:
 3. No campo **"Membro extraído"**, escolha quem é o(a) usuário(a) da declaração
    (por padrão já vem selecionado o responsável familiar). Os demais moradores são
    automaticamente listados na tabela "Também residem neste endereço".
-4. Os dados da unidade (prefeitura, CNPJ, secretaria, endereço, UBS, coordenador(a) e
-   COREN) já vêm preenchidos com o padrão da Secretaria Municipal de Saúde de São
-   Gonçalo do Pará; o **ACS responsável** agora vem preenchido pela extração (cartão
+4. O cabeçalho do PDF (Prefeitura Municipal de São Gonçalo do Pará – MG, CNPJ,
+   Secretaria Municipal de Saúde e endereço da Secretaria) é **fixo** e sempre sai
+   igual. O nome da UBS vem preenchido; o **CNES da unidade** é opcional — se
+   preenchido, o texto sai como "UBS CENTRAL (CNES 1234567)", senão só "UBS CENTRAL".
+   Nome e COREN do(a) enfermeiro(a) coordenador(a) vêm **em branco**: assim o PDF
+   imprime só "Enfermeiro(a) e Coordenador(a) da Unidade" sob a linha de assinatura,
+   para preencher no papel (se preenchidos no popup, saem abaixo do cargo). O **ACS responsável** agora vem preenchido pela extração (cartão
    de CBO "Agente comunitário de saúde" da aba "Informações cadastrais") — confira e
    ajuste se preciso — e use **"salvar como padrão"** se quiser alterar algum dado
    fixo permanentemente.
@@ -62,7 +66,10 @@ entre as duas com um único clique:
    últimas visitas do imóvel sem filtrar, em vez de voltar vazia — confira
    manualmente nesse caso. Cada linha junta data e turno (ex.: "25/03/2026
    (Noite)"); a coluna "Desfecho Visita" traz apenas o campo Desfecho do e-SUS
-   (ex.: "Visita realizada").
+   (ex.: "Visita realizada"). A tabela do PDF tem exatamente uma linha por visita
+   encontrada (1, 2 ou 3, sem linhas em branco); sem nenhuma visita ao responsável,
+   no lugar da tabela sai em negrito "NÃO EXISTEM REGISTROS DE VISITAS AO RESPONSÁVEL
+   FAMILIAR NESTE ENDEREÇO".
    Se a navegação automática entre as abas falhar (layout do e-SUS mudou), abra a
    aba que faltou manualmente e clique em Extrair de novo — nada do que já foi
    extraído é apagado — ou preencha manualmente.

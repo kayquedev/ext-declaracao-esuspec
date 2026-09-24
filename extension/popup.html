@@ -18,6 +18,10 @@
     <button id="btnExtract" type="button" class="btn btn-primary">🔍 Extrair dados da página atual</button>
     <span id="extractStatus" class="status"></span>
   </div>
+  <div id="extractingBox" class="extracting-box" role="alert" hidden>
+    EXTRAINDO INFORMAÇÕES AUTOMATICAMENTE DO E-SUS PEC, AGUARDE, NÃO REALIZE NENHUMA AÇÃO!
+    <small>A extensão navega sozinha entre "Informações cadastrais", "Famílias e moradores" e "Últimas visitas" — isso pode levar alguns segundos.</small>
+  </div>
   <p class="hint">Um clique em <strong>Extrair</strong> já navega sozinho entre "Famílias e
     moradores" e "Últimas visitas" e traz os dois. Se o e-SUS mudar de layout e a
     navegação automática falhar, abra a página que faltou manualmente e clique em
@@ -28,32 +32,21 @@
     <fieldset>
       <legend>Unidade / Equipe <button type="button" id="btnSaveDefaults" class="btn-link">salvar como padrão</button></legend>
       <div class="grid-2">
-        <label>Prefeitura Municipal de
-          <input type="text" id="prefeitura" value="São Gonçalo do Pará" />
-        </label>
-        <label>UF
-          <input type="text" id="prefeituraUf" maxlength="2" value="MG" />
-        </label>
-        <label>CNPJ
-          <input type="text" id="cnpj" value="18.291.369/0001-66" />
-        </label>
-        <label>Secretaria
-          <input type="text" id="secretaria" value="Secretaria Municipal de Saúde" />
-        </label>
-        <label class="col-span-2">Endereço da Secretaria
-          <input type="text" id="secretariaEndereco" value="Av. Presidente Tancredo Neves, n 473 – Centro" />
-        </label>
-        <label class="col-span-2">Nome da UBS
+        <p class="hint col-span-2">O cabeçalho do PDF (Prefeitura, CNPJ, Secretaria e endereço) é fixo, no padrão da Secretaria Municipal de Saúde de São Gonçalo do Pará.</p>
+        <label>Nome da UBS
           <input type="text" id="ubs" value="UBS CENTRAL" />
+        </label>
+        <label>CNES da unidade
+          <input type="text" id="cnesUbs" inputmode="numeric" maxlength="7" placeholder="Opcional" />
         </label>
         <label>Agente Comunitário(a) de Saúde
           <input type="text" id="acs" placeholder="Nome do ACS" />
         </label>
         <label>Enfermeiro(a) Coordenador(a)
-          <input type="text" id="coordenador" value="Maryana Vieira Rodrigues" />
+          <input type="text" id="coordenador" placeholder="Opcional — em branco, fica para preencher no papel" />
         </label>
         <label>Registro (COREN)
-          <input type="text" id="coordenadorRegistro" value="COREN-MG: 810320-ENF" />
+          <input type="text" id="coordenadorRegistro" placeholder="Opcional" />
         </label>
       </div>
     </fieldset>
@@ -148,6 +141,8 @@
 
     <div class="actions">
       <button type="submit" class="btn btn-primary btn-large">📄 Gerar PDF</button>
+      <button type="button" id="btnCopyOrientacoes" class="btn btn-secondary btn-large">📋 Copiar para "Orientações" (e-SUS)</button>
+      <p class="hint">Copia o mesmo texto da declaração, já formatado (negrito e quebras de linha), para colar (Ctrl+V) na aba <strong>Orientações</strong> do prontuário do cidadão. Não inclui a assinatura do(a) enfermeiro(a): a aba Orientações já assina automaticamente com quem estiver logado no e-SUS ao salvar — por isso só o nome do ACS entra no texto.</p>
     </div>
   </form>
 
