@@ -1229,17 +1229,18 @@ function escapeHtml(s) {
 
 // A aba "Orientações" do e-SUS é um campo de texto rico, mas testado
 // manualmente contra o campo real: dentro de um único parágrafo, <br><br>
-// é a forma confirmada de abrir linha em branco de verdade — por isso os
-// títulos/parágrafo/frase de fechamento ficam num <p> só, com esse
-// espaçamento exatamente nos pontos marcados pelo usuário (antes de cada
-// título/frase, 4x seguidos antes da linha de assinatura) e só 1 <br>
-// simples no resto (título -> conteúdo logo abaixo, linha de assinatura
-// -> nome do ACS). Moradores e visitas usam <ul>/<li> de verdade (também
-// confirmado colando certo) como blocos à parte, entre esses parágrafos —
-// <ul> não pode ficar dentro de <p>. Não inclui cabeçalho da prefeitura
-// nem data (a aba já tem o próprio timbre e já gera a data automaticamente
-// ao salvar) nem a assinatura do(a) enfermeiro(a): a aba assina sozinha
-// com quem estiver logado ao salvar, então só o ACS entra no texto.
+// é a forma confirmada de abrir linha em branco de verdade — por isso todo
+// o texto (títulos, parágrafo, linhas de moradores/visitas, frase de
+// fechamento) fica num <p> só. Espaçamento (<br><br>) só nos 5 pontos
+// marcados pelo usuário: antes de cada um dos 4 títulos/frase, e 3x
+// seguidos antes da linha de assinatura. No resto — título -> conteúdo
+// logo abaixo, entre uma linha e outra da lista de moradores/visitas
+// (sem marcador "*" nem <ul>, texto puro), linha de assinatura -> nome do
+// ACS — é só 1 <br>, sem linha em branco. Não inclui cabeçalho da
+// prefeitura nem data (a aba já tem o próprio timbre e já gera a data
+// automaticamente ao salvar) nem a assinatura do(a) enfermeiro(a): a aba
+// assina sozinha com quem estiver logado ao salvar, então só o ACS entra
+// no texto.
 function buildOrientacoesConteudo(d) {
   const p = prepararDeclaracao(d);
   const acsTexto = d.acs ? `ACS ${d.acs}` : 'ACS Responsável';
@@ -1269,31 +1270,36 @@ function buildOrientacoesConteudo(d) {
   const avisoSemMorador = p.moradoresPreenchidos.length === 0;
   const avisoSemVisita = p.visitas.length === 0;
 
-  // Sem dado, o aviso fica sozinho em negrito num parágrafo (não é
-  // lista); com dados, vira um <ul><li> de verdade (confirmado colando
-  // certo, sem precisar de <br> entre os itens).
-  const moradoresBloco = avisoSemMorador
-    ? `<p><strong>${escapeHtml(moradoresLinhas[0])}</strong></p>`
-    : `<ul>${moradoresLinhas.map(l => `<li>${escapeHtml(l)}</li>`).join('')}</ul>`;
-  const visitasBloco = avisoSemVisita
-    ? `<p><strong>${escapeHtml(visitasLinhas[0])}</strong></p>`
-    : `<ul>${visitasLinhas.map(l => `<li>${escapeHtml(l)}</li>`).join('')}</ul>`;
+  // Sem "* " nem <ul> — cada linha de morador/visita fica em texto puro,
+  // separada só por 1 <br> (sem linha em branco entre os itens), tudo
+  // dentro do mesmo <p> só.
+  const moradoresHtml = avisoSemMorador
+    ? `<strong>${escapeHtml(moradoresLinhas[0])}</strong>`
+    : moradoresLinhas.map(l => escapeHtml(l)).join('<br>');
+  const visitasHtml = avisoSemVisita
+    ? `<strong>${escapeHtml(visitasLinhas[0])}</strong>`
+    : visitasLinhas.map(l => escapeHtml(l)).join('<br>');
 
   // ESPACAMENTO = <br><br> (a técnica confirmada, garante linha em
-  // branco de verdade). Só entra exatamente nos pontos marcados pelo
-  // usuário: antes de cada título/frase, e 4x seguidos antes da linha de
-  // assinatura. Em todo o resto — título -> conteúdo logo abaixo, linha
-  // de assinatura -> nome do ACS — é só 1 <br>, sem linha em branco.
+  // branco de verdade). Só entra exatamente nos 5 pontos marcados pelo
+  // usuário: antes de cada um dos 4 títulos/frase, e 3x seguidos antes da
+  // linha de assinatura. Em todo o resto — título -> conteúdo logo
+  // abaixo, entre uma linha e outra da lista, linha de assinatura -> nome
+  // do ACS — é só 1 <br>, sem linha em branco.
   const ESP1 = '<br>';
   const ESPACAMENTO = '<br><br>';
 
-  const html = [
-    `<p>${ESPACAMENTO}<strong>DECLARAÇÃO DE ENDEREÇO</strong>${ESP1}${paragrafoHtml}${ESPACAMENTO}<strong>Também residem neste endereço, os seguintes moradores:</strong></p>`,
-    moradoresBloco,
-    `<p>${ESPACAMENTO}<strong>Últimas visitas realizadas à família:</strong></p>`,
-    visitasBloco,
-    `<p>${ESPACAMENTO}Para clareza e por ser verdade, firmo a presente declaração.${ESPACAMENTO}${ESPACAMENTO}${ESPACAMENTO}${ESPACAMENTO}________________________________${ESP1}${escapeHtml(acsTexto)}</p>`
-  ].join('\n');
+  const html = '<p>' + [
+    `${ESPACAMENTO}<strong>DECLARAÇÃO DE ENDEREÇO</strong>${ESP1}`,
+    `${paragrafoHtml}${ESPACAMENTO}`,
+    `<strong>Também residem neste endereço, os seguintes moradores:</strong>${ESP1}`,
+    `${moradoresHtml}${ESPACAMENTO}`,
+    `<strong>Últimas visitas realizadas à família:</strong>${ESP1}`,
+    `${visitasHtml}${ESPACAMENTO}`,
+    `Para clareza e por ser verdade, firmo a presente declaração.${ESPACAMENTO}${ESPACAMENTO}${ESPACAMENTO}`,
+    `________________________________${ESP1}`,
+    escapeHtml(acsTexto)
+  ].join('') + '</p>';
 
   // Texto simples: só o fallback de último caso, se o navegador não
   // conseguir colar HTML nenhum. Sem marcação nenhuma, só as quebras.
