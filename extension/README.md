@@ -99,8 +99,7 @@ linha do ACS são quatro seguidos (`<br><br>` × 4). No resto — título → co
 colado logo abaixo, linha de assinatura → nome do ACS — é só 1 `<br>`, sem linha
 em branco. Moradores e visitas usam `<ul>`/`<li>` de verdade (também confirmado
 colando certo) como blocos à parte entre esses parágrafos, já que `<ul>` não
-pode ficar dentro de `<p>`. No parágrafo da declaração, "nome do(a) usuário, CPF/CNS"
-fica em negrito (`<strong>`) no meio da frase. Tamanho de fonte, cor/destaque, `<img>`
+pode ficar dentro de `<p>`. Tamanho de fonte, cor/destaque, `<img>`
 (cola a URL da imagem como texto gigante) e `<table>` não sobrevivem ao colar e
 não são usados. Não traz o cabeçalho da prefeitura
 (a aba já imprime o próprio timbre), nem a data (a aba já gera a data automático

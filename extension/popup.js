@@ -1246,17 +1246,9 @@ function buildOrientacoesConteudo(d) {
   const docTexto = p.docLabel ? `, ${p.docLabel},` : ',';
   const acsFraseTexto = d.acs ? ` ${d.acs}` : '';
   const microareaTexto = d.microarea ? `, Microárea ${d.microarea}` : '';
-  // Nome do usuário + CPF/CNS ficam em negrito no meio da frase — os
-  // outros dois trechos entram escapados por fora do <strong>.
-  const paragrafoAntesNome = `Declaro, para os devidos fins, junto à ${p.secretariaNome}, que o(a) usuário `;
-  const paragrafoNomeDoc = `${d.usuarioNome}${docTexto}`;
-  const paragrafoDepoisNome = ` reside à ${p.enderecoCompleto}. ` +
+  const paragrafo = `Declaro, para os devidos fins, junto à ${p.secretariaNome}, que o(a) usuário ${d.usuarioNome}${docTexto} reside à ${p.enderecoCompleto}. ` +
     `O endereço acima citado é de abrangência da Unidade Básica de Saúde da ${p.ubsTexto} e o(a) morador(a) é usuário(a) do serviço aqui prestado, ` +
     `e acompanhado pelo Agente Comunitário de Saúde${acsFraseTexto}${microareaTexto}.`;
-  const paragrafo = paragrafoAntesNome + paragrafoNomeDoc + paragrafoDepoisNome;
-  const paragrafoHtml = escapeHtml(paragrafoAntesNome) +
-    `<strong>${escapeHtml(paragrafoNomeDoc)}</strong>` +
-    escapeHtml(paragrafoDepoisNome);
 
   const moradoresLinhas = p.moradoresPreenchidos.length === 0
     ? ['NÃO RESIDE MAIS NENHUM MORADOR']
@@ -1288,7 +1280,7 @@ function buildOrientacoesConteudo(d) {
   const ESPACAMENTO = '<br><br>';
 
   const html = [
-    `<p>${ESPACAMENTO}<strong>DECLARAÇÃO DE ENDEREÇO</strong>${ESP1}${paragrafoHtml}${ESPACAMENTO}<strong>Também residem neste endereço, os seguintes moradores:</strong></p>`,
+    `<p>${ESPACAMENTO}<strong>DECLARAÇÃO DE ENDEREÇO</strong>${ESP1}${escapeHtml(paragrafo)}${ESPACAMENTO}<strong>Também residem neste endereço, os seguintes moradores:</strong></p>`,
     moradoresBloco,
     `<p>${ESPACAMENTO}<strong>Últimas visitas realizadas à família:</strong></p>`,
     visitasBloco,
