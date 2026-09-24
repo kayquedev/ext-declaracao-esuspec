@@ -79,6 +79,20 @@ entre as duas com um único clique:
    `Declaracao_Endereco_<nome_do_usuario>.pdf`, com o brasão da prefeitura como
    marca d'água grande e centralizada na página, igual ao modelo oficial.
 
+## Registrar direto no prontuário (aba "Orientações")
+
+Em vez do PDF, dá para registrar a mesma declaração na aba **Orientações** do
+prontuário do cidadão no e-SUS PEC. Clique em **"📋 Copiar para 'Orientações'
+(e-SUS)"** (mesma validação do PDF: precisa do nome do usuário e da data), abra a
+aba Orientações no e-SUS e cole com **Ctrl+V**.
+
+O texto copiado usa a marcação de texto simples que a aba Orientações entende, e
+não HTML: trechos entre `*asteriscos*` viram negrito, e uma linha só com `%` marca
+onde deve haver quebra entre blocos (sem isso o campo junta os parágrafos). Não
+traz o cabeçalho da prefeitura (a aba já imprime o próprio timbre) nem a
+assinatura do(a) enfermeiro(a) — a aba assina sozinha com o profissional logado ao
+salvar — por isso só entra a linha `ACS <nome>` no final.
+
 ## Sobre a extração
 
 A extração de endereço/moradores é feita por padrões de texto (regex) sobre o

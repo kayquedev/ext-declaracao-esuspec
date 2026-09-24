@@ -1221,136 +1221,81 @@ async function onSubmit(ev) {
 
 /* --------------------- texto para a aba "Orientações" ---------------- */
 
-function escapeHtml(s) {
-  return String(s || '').replace(/[&<>"']/g, c => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  }[c]));
-}
-
-// Monta o mesmo texto da declaração em duas versões: HTML (com negrito e
-// quebras de linha, para colar direto na aba "Orientações" do e-SUS, que
-// é um campo de texto rico) e texto simples (fallback). Não traz a
-// assinatura do(a) enfermeiro(a): a aba "Orientações" já assina
-// automaticamente com o profissional logado ao salvar — só o ACS precisa
-// vir no texto.
-function buildOrientacoesConteudo(d) {
+// A aba "Orientações" do e-SUS não aceita HTML colado: o próprio campo usa
+// uma marcação de texto simples — *texto* vira negrito — e engole linhas
+// em branco (parágrafos ficam "tudo junto"). Por isso cada quebra entre
+// blocos precisa vir como uma linha só com "%", não como linha vazia.
+// Não inclui cabeçalho da prefeitura (o formulário "Orientações" já tem o
+// timbre) nem a assinatura do(a) enfermeiro(a) — a aba assina sozinha com
+// quem estiver logado ao salvar, então só o ACS entra no texto.
+function buildOrientacoesTexto(d) {
   const p = prepararDeclaracao(d);
   const acsTexto = d.acs ? `ACS ${d.acs}` : 'ACS Responsável';
   const docTexto = p.docLabel ? `, ${p.docLabel},` : ',';
   const acsFraseTexto = d.acs ? ` ${d.acs}` : '';
   const microareaTexto = d.microarea ? `, Microárea ${d.microarea}` : '';
 
-  const moradoresLinhasTexto = p.moradoresPreenchidos.length === 0
-    ? ['NÃO RESIDE MAIS NENHUM MORADOR']
+  const moradoresLinhas = p.moradoresPreenchidos.length === 0
+    ? ['*NÃO RESIDE MAIS NENHUM MORADOR*']
     : p.moradoresPreenchidos.map(m => [m[0], m[1], m[2]].filter(Boolean).join(' — '));
 
-  const visitasLinhasTexto = p.visitas.length === 0
-    ? ['NÃO EXISTEM REGISTROS DE VISITAS AO RESPONSÁVEL FAMILIAR NESTE ENDEREÇO']
+  const visitasLinhas = p.visitas.length === 0
+    ? ['*NÃO EXISTEM REGISTROS DE VISITAS AO RESPONSÁVEL FAMILIAR NESTE ENDEREÇO*']
     : p.visitas.map(v => [v[0], v[1]].filter(Boolean).join(' — '));
 
-  const text = [
-    CABECALHO.prefeitura,
-    CABECALHO.cnpj,
-    CABECALHO.secretaria,
-    CABECALHO.endereco,
-    '',
-    'DECLARAÇÃO DE ENDEREÇO',
-    '',
+  return [
+    '*DECLARAÇÃO DE ENDEREÇO*',
     `Declaro, para os devidos fins, junto à ${p.secretariaNome}, que o(a) usuário ${d.usuarioNome}${docTexto} reside à ${p.enderecoCompleto}. ` +
       `O endereço acima citado é de abrangência da Unidade Básica de Saúde da ${p.ubsTexto} e o(a) morador(a) é usuário(a) do serviço aqui prestado, ` +
       `e acompanhado pelo Agente Comunitário de Saúde${acsFraseTexto}${microareaTexto}.`,
-    '',
-    'Também residem neste endereço, os seguintes moradores:',
-    ...moradoresLinhasTexto,
-    '',
-    'Últimas visitas realizadas à família:',
-    ...visitasLinhasTexto,
-    '',
+    '%',
+    '*Também residem neste endereço, os seguintes moradores:*',
+    ...moradoresLinhas,
+    '%',
+    '*Últimas visitas realizadas à família:*',
+    ...visitasLinhas,
+    '%',
     'Para clareza e por ser verdade, firmo a presente declaração.',
+    '%',
     `${p.local}, ${d.dataExtenso}.`,
-    '',
+    '%',
+    '%',
+    '%',
+    '%',
+    '________________________________',
     acsTexto
   ].join('\n');
-
-  const moradoresHtml = p.moradoresPreenchidos.length === 0
-    ? '<strong>NÃO RESIDE MAIS NENHUM MORADOR</strong>'
-    : p.moradoresPreenchidos.map(m => escapeHtml([m[0], m[1], m[2]].filter(Boolean).join(' — '))).join('<br>');
-
-  const visitasHtml = p.visitas.length === 0
-    ? '<strong>NÃO EXISTEM REGISTROS DE VISITAS AO RESPONSÁVEL FAMILIAR NESTE ENDEREÇO</strong>'
-    : p.visitas.map(v => escapeHtml([v[0], v[1]].filter(Boolean).join(' — '))).join('<br>');
-
-  const html = [
-    `<p><strong>${escapeHtml(CABECALHO.prefeitura)}</strong><br>`,
-    `${escapeHtml(CABECALHO.cnpj)}<br>`,
-    `${escapeHtml(CABECALHO.secretaria)}<br>`,
-    `${escapeHtml(CABECALHO.endereco)}</p>`,
-    `<p style="text-align:center"><strong>DECLARAÇÃO DE ENDEREÇO</strong></p>`,
-    `<p>Declaro, para os devidos fins, junto à ${escapeHtml(p.secretariaNome)}, que o(a) usuário <strong>${escapeHtml(d.usuarioNome)}</strong>${p.docLabel ? `, ${escapeHtml(p.docLabel)},` : ','} ` +
-      `reside à ${escapeHtml(p.enderecoCompleto)}. O endereço acima citado é de abrangência da Unidade Básica de Saúde da <strong>${escapeHtml(p.ubsTexto)}</strong> ` +
-      `e o(a) morador(a) é usuário(a) do serviço aqui prestado, e acompanhado pelo Agente Comunitário de Saúde${d.acs ? ` <strong>${escapeHtml(d.acs)}</strong>` : ''}${escapeHtml(microareaTexto)}.</p>`,
-    `<p>Também residem neste endereço, os seguintes moradores:<br>${moradoresHtml}</p>`,
-    `<p>Últimas visitas realizadas à família:<br>${visitasHtml}</p>`,
-    `<p>Para clareza e por ser verdade, firmo a presente declaração.<br>${escapeHtml(p.local)}, ${escapeHtml(d.dataExtenso)}.</p>`,
-    `<p>${escapeHtml(acsTexto)}</p>`
-  ].join('\n');
-
-  return { html, text };
 }
 
-// Copia HTML (com fallback para texto simples) selecionando um elemento
-// oculto e usando execCommand('copy'). Funciona em mais contextos que a
-// Clipboard API moderna (que em alguns popups de extensão é bloqueada por
-// política do navegador mesmo com o clique do usuário).
-function copyRichHtmlViaSelecao(html) {
-  const container = document.createElement('div');
-  container.innerHTML = html;
-  container.style.position = 'fixed';
-  container.style.left = '-9999px';
-  container.setAttribute('contenteditable', 'true');
-  document.body.appendChild(container);
-
-  const range = document.createRange();
-  range.selectNodeContents(container);
-  const selection = window.getSelection();
-  selection.removeAllRanges();
-  selection.addRange(range);
-
-  const ok = document.execCommand('copy');
-  selection.removeAllRanges();
-  document.body.removeChild(container);
-  if (!ok) throw new Error('execCommand("copy") não foi aceito pelo navegador.');
-}
-
-async function copyRichHtml(html, text) {
-  if (navigator.clipboard && window.ClipboardItem) {
+async function copyTexto(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
     try {
-      const item = new ClipboardItem({
-        'text/html': new Blob([html], { type: 'text/html' }),
-        'text/plain': new Blob([text], { type: 'text/plain' })
-      });
-      await navigator.clipboard.write([item]);
+      await navigator.clipboard.writeText(text);
       return;
     } catch (err) {
       // Segue para o fallback abaixo (ex.: "Document is not focused" ou
       // permissão de clipboard bloqueada pela política do navegador).
-      console.warn('Clipboard API falhou, tentando fallback via seleção:', err);
+      console.warn('Clipboard API falhou, tentando fallback via execCommand:', err);
     }
   }
-  try {
-    copyRichHtmlViaSelecao(html);
-  } catch (err) {
-    console.warn('Fallback via seleção falhou, copiando só texto simples:', err);
-    await navigator.clipboard.writeText(text);
-  }
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.style.position = 'fixed';
+  textarea.style.left = '-9999px';
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  const ok = document.execCommand('copy');
+  document.body.removeChild(textarea);
+  if (!ok) throw new Error('Não foi possível copiar automaticamente.');
 }
 
 async function handleCopyOrientacoes() {
   if (!validarFormulario()) return;
   const data = collectFormData();
   try {
-    const { html, text } = buildOrientacoesConteudo(data);
-    await copyRichHtml(html, text);
+    const text = buildOrientacoesTexto(data);
+    await copyTexto(text);
     setStatus('Texto copiado — cole (Ctrl+V) na aba "Orientações" do prontuário no e-SUS.');
   } catch (err) {
     console.error(err);
