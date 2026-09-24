@@ -87,11 +87,15 @@ prontuário do cidadão no e-SUS PEC. Clique em **"📋 Copiar para 'Orientaçõ
 aba Orientações no e-SUS e cole com **Ctrl+V**.
 
 O texto copiado vai como HTML de verdade (a aba Orientações é um campo de texto
-rico): negrito nos títulos de seção e nos avisos de "não há morador/visita", um
-parágrafo por bloco (não depende de linha em branco sobreviver ao colar). Não traz
-o cabeçalho da prefeitura (a aba já imprime o próprio timbre) nem a assinatura
-do(a) enfermeiro(a) — a aba assina sozinha com o profissional logado ao salvar —
-por isso só entra a linha `ACS <nome>` no final.
+rico), mas só com as tags confirmadas manualmente contra o campo real: `<p>`,
+`<strong>` (negrito nos títulos de seção e nos avisos de "não há morador/visita")
+e `<ul>`/`<li>` (lista de moradores e de visitas). `<i>`/`<u>` (itálico/sublinhado)
+e emoji/Unicode também colam certo, mas não são usados aqui. Testado e **não**
+usado por não sobreviver ao colar: tamanho de fonte, cor/destaque, `<img>` (cola a
+URL da imagem como texto gigante) e `<table>`. Não traz o cabeçalho da prefeitura
+(a aba já imprime o próprio timbre) nem a assinatura do(a) enfermeiro(a) — a aba
+assina sozinha com o profissional logado ao salvar — por isso só entra a linha
+`ACS <nome>` no final.
 
 ## Sobre a extração
 

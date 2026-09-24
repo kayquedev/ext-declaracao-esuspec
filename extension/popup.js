@@ -1227,12 +1227,13 @@ function escapeHtml(s) {
   }[c]));
 }
 
-// A aba "Orientações" do e-SUS é um campo de texto rico (aceita HTML de
-// verdade: negrito, itálico etc.), então o conteúdo copiado precisa ir
-// como HTML, não como marcação própria. Cada bloco vira um <p> (o próprio
-// parágrafo já separa as linhas — não depende de linha em branco
-// sobreviver ao colar) e o negrito usa <strong>, só nos títulos de seção e
-// nos avisos de "não há morador/visita" — igual ao texto de exemplo.
+// A aba "Orientações" do e-SUS é um campo de texto rico, mas só aceita um
+// conjunto limitado de HTML ao colar — testado manualmente contra o campo
+// real: <strong>/<b> (negrito), <i>/<u> (itálico/sublinhado), <ul><li>
+// (lista) e emoji/Unicode funcionam; font-size, color e outros estilos
+// inline, <img> e <table> são descartados (ou pior, no caso de <img>,
+// vazam a URL como texto gigante). Por isso o HTML aqui só usa <p>,
+// <strong> e <ul>/<li> — nada de <br>, cor ou tamanho de fonte.
 // Não inclui cabeçalho da prefeitura (a aba já tem o próprio timbre) nem a
 // assinatura do(a) enfermeiro(a): a aba assina sozinha com quem estiver
 // logado ao salvar, então só o ACS entra no texto.
@@ -1257,15 +1258,23 @@ function buildOrientacoesConteudo(d) {
   const avisoSemMorador = p.moradoresPreenchidos.length === 0;
   const avisoSemVisita = p.visitas.length === 0;
 
+  // Sem dado nenhum, o aviso sai como parágrafo em negrito (não é uma
+  // lista); com dados, cada linha vira um <li> da lista com marcadores.
+  const moradoresBloco = avisoSemMorador
+    ? `<p><strong>${escapeHtml(moradoresLinhas[0])}</strong></p>`
+    : `<ul>${moradoresLinhas.map(l => `<li>${escapeHtml(l)}</li>`).join('')}</ul>`;
+
+  const visitasBloco = avisoSemVisita
+    ? `<p><strong>${escapeHtml(visitasLinhas[0])}</strong></p>`
+    : `<ul>${visitasLinhas.map(l => `<li>${escapeHtml(l)}</li>`).join('')}</ul>`;
+
   const html = [
     `<p><strong>DECLARAÇÃO DE ENDEREÇO</strong></p>`,
     `<p>${escapeHtml(paragrafo)}</p>`,
-    `<p><strong>Também residem neste endereço, os seguintes moradores:</strong><br>` +
-      moradoresLinhas.map(l => avisoSemMorador ? `<strong>${escapeHtml(l)}</strong>` : escapeHtml(l)).join('<br>') +
-      `</p>`,
-    `<p><strong>Últimas visitas realizadas à família:</strong><br>` +
-      visitasLinhas.map(l => avisoSemVisita ? `<strong>${escapeHtml(l)}</strong>` : escapeHtml(l)).join('<br>') +
-      `</p>`,
+    `<p><strong>Também residem neste endereço, os seguintes moradores:</strong></p>`,
+    moradoresBloco,
+    `<p><strong>Últimas visitas realizadas à família:</strong></p>`,
+    visitasBloco,
     `<p>Para clareza e por ser verdade, firmo a presente declaração.</p>`,
     `<p>${escapeHtml(p.local)}, ${escapeHtml(d.dataExtenso)}.</p>`,
     `<p>&nbsp;</p>`,
