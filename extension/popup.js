@@ -552,6 +552,16 @@ async function extractAllPagesData() {
 
     const folhas = (root) => [...root.querySelectorAll('*')].filter(x => x.children.length === 0);
 
+    // Valor ao lado de um rótulo-folha dentro do cartão (mesmo padrão do
+    // par CBO/valor logo abaixo), usado para ler "Unidade de saúde".
+    const valorDoRotulo = (root, rotulo) => {
+      const lbl = folhas(root).find(
+        x => (x.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase() === rotulo.toLowerCase()
+      );
+      if (!lbl || !lbl.nextElementSibling) return '';
+      return (lbl.nextElementSibling.textContent || '').replace(/\s+/g, ' ').trim();
+    };
+
     // Escopo: sobe do título da seção até um ancestral que contenha "CBO".
     const titulo = folhas(document).find(
       x => (x.textContent || '').replace(/\s+/g, ' ').trim() === 'Responsabilidade de acompanhamento'
@@ -580,18 +590,25 @@ async function extractAllPagesData() {
         const qtdCbo = folhas(card).filter(x => (x.textContent || '').trim() === 'CBO').length;
         if (qtdCbo > 1) break; // subiu demais, juntou cartões
         const nome = folhas(card).map(x => (x.textContent || '').replace(/\s+/g, ' ').trim()).find(pareceNome);
-        if (nome) return nome;
+        if (nome) {
+          const unidade = valorDoRotulo(card, 'Unidade de saúde');
+          return { nome, unidade };
+        }
       }
     }
 
-    // Fallback: regex sobre o texto do escopo ("<nome>CBOAgente comunitário…").
+    // Fallback: regex sobre o texto do escopo ("<nome>CBOAgente comunitário…Unidade de saúde<unidade>").
     const txt = (escopo.textContent || '').replace(/\s+/g, ' ').trim();
     const m = txt.match(/([\p{Lu}][\p{L}'.-]+(?:\s+[\p{L}'.-]+){1,5})\s*CBO\s*Agente\s+comunit[áa]rio/u);
     if (m) {
       const nome = m[1].replace(/^.*Responsabilidade de acompanhamento\s*/i, '').trim();
-      if (pareceNome(nome)) return nome;
+      if (pareceNome(nome)) {
+        const restante = txt.slice(m.index + m[0].length, m.index + m[0].length + 400);
+        const um = restante.match(/Unidade de sa[úu]de\s*([^]*?)(?=\s*(?:CBO|Equipe|Respons|$))/iu);
+        return { nome, unidade: um ? um[1].trim() : '' };
+      }
     }
-    return '';
+    return { nome: '', unidade: '' };
   }
 
   // 1) Garante que estamos vendo "Famílias e moradores" e extrai
@@ -614,15 +631,16 @@ async function extractAllPagesData() {
   // 1b) Lê o ACS de "Responsabilidade de acompanhamento" na aba
   //     "Informações cadastrais" (navega até lá se ainda não estiver
   //     vendo essa seção).
-  let acsResponsavel = parseResponsavelAcompanhamento();
-  if (!acsResponsavel) {
+  let acompanhamento = parseResponsavelAcompanhamento();
+  if (!acompanhamento.nome) {
     const tabInfo = findTabByLabel(['Informações cadastrais', 'Informações do cadastro', 'Informações']);
     if (tabInfo) {
       await clickTabAndWait(tabInfo, 4000);
-      acsResponsavel = parseResponsavelAcompanhamento();
+      acompanhamento = parseResponsavelAcompanhamento();
     }
   }
-  base.acs = acsResponsavel;
+  base.acs = acompanhamento.nome;
+  base.unidadeSaude = acompanhamento.unidade;
 
   // 2) Navega para "Últimas visitas", expande cada item e extrai só as
   //    visitas do(a) responsável familiar feitas pelo ACS de
@@ -632,7 +650,7 @@ async function extractAllPagesData() {
   const tabVisitas = findTabByLabel(['Últimas visitas', 'Visitas', 'Histórico de visitas']);
   if (tabVisitas) {
     await clickTabAndWait(tabVisitas, 4000);
-    const resultado = await parseVisitas(nomeResponsavel, acsResponsavel);
+    const resultado = await parseVisitas(nomeResponsavel, acompanhamento.nome);
     visitas = resultado.visitas;
     filtradoPorResponsavel = resultado.filtradoPorResponsavel;
 
@@ -779,6 +797,12 @@ async function handleExtract() {
     const foundAcs = !!(data.acs && data.acs.trim());
     if (foundAcs) $('acs').value = data.acs.trim();
 
+    // Nome da UBS: lido do mesmo cartão do ACS, no rótulo "Unidade de
+    // saúde" (aba "Informações cadastrais"). Sobrescreve o campo quando
+    // encontrado, assim como o ACS.
+    const foundUbs = !!(data.unidadeSaude && data.unidadeSaude.trim());
+    if (foundUbs) $('ubs').value = data.unidadeSaude.trim();
+
     if (foundMembers) {
       state.members = data.members;
       const select = $('primaryMemberSelect');
@@ -809,6 +833,7 @@ async function handleExtract() {
 
     const parts = [];
     if (foundAddress) parts.push('endereço');
+    if (foundUbs) parts.push(`UBS ${data.unidadeSaude.trim()}`);
     if (foundAcs) parts.push(`ACS ${data.acs.trim()}`);
     if (foundMembers) parts.push(`${state.members.length} morador(es)`);
     if (!foundVisitas && data.abaVisitasLida) {
