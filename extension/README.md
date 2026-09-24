@@ -89,17 +89,18 @@ Orientações no e-SUS e cole com **Ctrl+V**. O botão "📄 Gerar PDF" continua
 disponível, para quando o PDF avulso for realmente necessário.
 
 O texto copiado vai como HTML de verdade (a aba Orientações é um campo de texto
-rico), mas testado manualmente contra o campo real: `<p>` separados **não geram
-espaço nenhum** ao colar (o conteúdo fica todo grudado) — só `<strong>`/`<b>`
-(negrito), `<i>`/`<u>` (itálico/sublinhado), `<ul>`/`<li>` (lista, com o marcador
-"*" que o próprio campo desenha) e emoji/Unicode colam certo. O espaçamento entre
-blocos só funciona de um jeito: `<br>` repetido dentro de um único parágrafo. Por
-isso o texto usa `<p>` com `<br>` controlando cada quebra: 1 `<br>` bem no início
-(antes até do primeiro título) e 1 `<br>` em cada transição título ⇄ conteúdo ⇄
-próximo título; antes da linha de assinatura são 3 `<br>` seguidos. A lista de
-moradores e de visitas fica em blocos `<ul>` à parte (um `<ul>` não pode ficar
-dentro de um `<p>`) — a própria troca de bloco já desce a linha, sem precisar de
-`<br>` extra ali. Tamanho de fonte, cor/destaque, `<img>`
+rico), mas testado manualmente contra o campo real: `<p>` ou `<ul>`/`<li>` como
+blocos separados **não garantem quebra de linha nenhuma** ao colar (pode vir tudo
+"grudado") — só `<strong>`/`<b>` (negrito), `<i>`/`<u>` (itálico/sublinhado) e
+emoji/Unicode colam certo de forma confiável. A única forma confirmada de garantir
+a quebra é `<br><br>` (dois seguidos) dentro de um único parágrafo — é o que
+separa corretamente cada nome numa lista. Por isso o texto inteiro vai como **um
+único `<p>`**: `<br>` simples onde não precisa de garantia (título → conteúdo
+colado logo abaixo, linha de assinatura → nome do ACS), `<br><br>` entre cada
+linha de moradores/visitas, e `<br><br><br>` antes da linha de assinatura. As
+linhas de moradores e de visitas usam `* ` na frente (texto simples, não
+`<ul>`/`<li>`) para parecer lista sem depender de bloco separado. Tamanho de
+fonte, cor/destaque, `<img>`
 (cola a URL da imagem como texto gigante) e `<table>` não sobrevivem ao colar e
 não são usados. Não traz o cabeçalho da prefeitura
 (a aba já imprime o próprio timbre), nem a data (a aba já gera a data automático

@@ -1228,16 +1228,20 @@ function escapeHtml(s) {
 }
 
 // A aba "Orientações" do e-SUS é um campo de texto rico, mas testado
-// manualmente contra o campo real: <p> separados NÃO geram espaço nenhum
-// ao colar (vira tudo "grudado"), só <strong>/<b>, <i>/<u> e <ul><li>
-// funcionam como esperado. O espaçamento entre blocos só funciona de um
-// jeito: <br> repetido dentro de um único parágrafo — por isso o texto
-// inteiro vai como um <p> só, com sequências de <br> controlando cada
-// espaçamento (1 <br> só desce a linha, repetir <br> abre linhas em
-// branco). Não inclui cabeçalho da prefeitura nem data (a aba já tem o
-// próprio timbre e já gera a data automaticamente ao salvar) nem a
-// assinatura do(a) enfermeiro(a): a aba assina sozinha com quem estiver
-// logado ao salvar, então só o ACS entra no texto.
+// manualmente contra o campo real: <p> separados (ou <ul>/<li> como bloco
+// à parte) NÃO garantem quebra de linha nenhuma ao colar — pode vir tudo
+// "grudado". A única forma confirmada de garantir a quebra é <br><br>
+// (dois seguidos) dentro de um único parágrafo — é o que separa
+// corretamente cada nome numa lista de nomes, por exemplo. Por isso o
+// texto inteiro vai como um <p> só: <br> simples só onde não precisa de
+// garantia (título -> conteúdo colado logo abaixo, linha de assinatura ->
+// nome do ACS) e <br><br> entre cada item de uma lista (morador, visita).
+// As linhas de moradores/visitas usam "* " na frente (texto simples, sem
+// <ul>) para parecer lista sem depender de <ul> quebrar bloco. Não inclui
+// cabeçalho da prefeitura nem data (a aba já tem o próprio timbre e já
+// gera a data automaticamente ao salvar) nem a assinatura do(a)
+// enfermeiro(a): a aba assina sozinha com quem estiver logado ao salvar,
+// então só o ACS entra no texto.
 function buildOrientacoesConteudo(d) {
   const p = prepararDeclaracao(d);
   const acsTexto = d.acs ? `ACS ${d.acs}` : 'ACS Responsável';
@@ -1259,32 +1263,30 @@ function buildOrientacoesConteudo(d) {
   const avisoSemMorador = p.moradoresPreenchidos.length === 0;
   const avisoSemVisita = p.visitas.length === 0;
 
-  // Moradores e visitas voltam a ser <ul><li> (o próprio campo desenha o
-  // marcador "*" na frente de cada linha, fica mais organizado que texto
-  // corrido) — sem aviso, é lista; com aviso ("não há morador/visita"),
-  // é um parágrafo em negrito no lugar da lista.
-  const moradoresBloco = avisoSemMorador
-    ? `<p><strong>${escapeHtml(moradoresLinhas[0])}</strong></p>`
-    : `<ul>${moradoresLinhas.map(l => `<li>${escapeHtml(l)}</li>`).join('')}</ul>`;
-  const visitasBloco = avisoSemVisita
-    ? `<p><strong>${escapeHtml(visitasLinhas[0])}</strong></p>`
-    : `<ul>${visitasLinhas.map(l => `<li>${escapeHtml(l)}</li>`).join('')}</ul>`;
+  // Sem dado, o aviso fica sozinho em negrito (não é lista); com dados,
+  // cada linha ganha "* " na frente e as linhas são separadas por
+  // <br><br> — o mesmo padrão confirmado para separar nomes.
+  const moradoresHtml = avisoSemMorador
+    ? `<strong>${escapeHtml(moradoresLinhas[0])}</strong>`
+    : moradoresLinhas.map(l => `* ${escapeHtml(l)}`).join('<br><br>');
+  const visitasHtml = avisoSemVisita
+    ? `<strong>${escapeHtml(visitasLinhas[0])}</strong>`
+    : visitasLinhas.map(l => `* ${escapeHtml(l)}`).join('<br><br>');
 
-  // Cada quebra é 1 <br>: 1 antes do primeiro título, 1 entre título e
-  // conteúdo logo abaixo, 1 antes de cada novo título/frase seguinte, e 3
-  // seguidos antes da linha de assinatura. <ul>/<li> não pode ficar dentro
-  // de <p>, então cada lista é o seu próprio bloco entre dois <p>.
   const ESP1 = '<br>';
   const ESP3 = '<br><br><br>';
 
-  const html = [
-    '<br>',
-    `<p><strong>DECLARAÇÃO DE ENDEREÇO</strong>${ESP1}${escapeHtml(paragrafo)}${ESP1}<strong>Também residem neste endereço, os seguintes moradores:</strong></p>`,
-    moradoresBloco,
-    `<p>${ESP1}<strong>Últimas visitas realizadas à família:</strong></p>`,
-    visitasBloco,
-    `<p>${ESP1}Para clareza e por ser verdade, firmo a presente declaração.${ESP3}________________________________${ESP1}${escapeHtml(acsTexto)}</p>`
-  ].join('\n');
+  const html = '<p>' + [
+    `${ESP1}<strong>DECLARAÇÃO DE ENDEREÇO</strong>${ESP1}`,
+    `${escapeHtml(paragrafo)}${ESP1}`,
+    `<strong>Também residem neste endereço, os seguintes moradores:</strong>${ESP1}`,
+    `${moradoresHtml}${ESP1}`,
+    `<strong>Últimas visitas realizadas à família:</strong>${ESP1}`,
+    `${visitasHtml}${ESP1}`,
+    `Para clareza e por ser verdade, firmo a presente declaração.${ESP3}`,
+    `________________________________${ESP1}`,
+    escapeHtml(acsTexto)
+  ].join('') + '</p>';
 
   // Texto simples: só o fallback de último caso, se o navegador não
   // conseguir colar HTML nenhum. Sem marcação nenhuma, só as quebras.
