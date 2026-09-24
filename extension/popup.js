@@ -1047,6 +1047,9 @@ function prepararDeclaracao(d) {
   return { enderecoCompleto, docLabel, secretariaNome: CABECALHO.secretaria, ubsTexto, moradoresPreenchidos, visitas, local };
 }
 
+// Depende de window.jspdf — reintroduza <script src="lib/jspdf.umd.min.js">
+// em popup.html (removido para não pesar a abertura do popup enquanto o
+// botão "Gerar PDF" estiver fora da interface) antes de voltar a chamar isto.
 async function generatePdf(d) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
