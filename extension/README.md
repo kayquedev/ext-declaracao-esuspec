@@ -43,14 +43,17 @@ entre as duas com um único clique:
    automaticamente listados na tabela "Também residem neste endereço".
 4. O cabeçalho do PDF (Prefeitura Municipal de São Gonçalo do Pará – MG, CNPJ,
    Secretaria Municipal de Saúde e endereço da Secretaria) é **fixo** e sempre sai
-   igual. O nome da UBS vem preenchido; o **CNES da unidade** é opcional — se
-   preenchido, o texto sai como "UBS CENTRAL (CNES 1234567)", senão só "UBS CENTRAL".
-   Nome e COREN do(a) enfermeiro(a) coordenador(a) vêm **em branco**: assim o PDF
-   imprime só "Enfermeiro(a) e Coordenador(a) da Unidade" sob a linha de assinatura,
-   para preencher no papel (se preenchidos no popup, saem abaixo do cargo). O **ACS responsável** agora vem preenchido pela extração (cartão
-   de CBO "Agente comunitário de saúde" da aba "Informações cadastrais") — confira e
-   ajuste se preciso — e use **"salvar como padrão"** se quiser alterar algum dado
-   fixo permanentemente.
+   igual. O **nome da UBS** agora vem preenchido pela extração (rótulo "Unidade de
+   saúde" do mesmo cartão do ACS, na aba "Informações cadastrais") — confira e ajuste
+   se preciso, ou preencha manualmente se a extração não encontrar. O **CNES da
+   unidade** é opcional — se preenchido, o texto sai como "UBS CENTRAL (CNES
+   1234567)", senão só o nome da UBS. Nome e COREN do(a) enfermeiro(a)
+   coordenador(a) vêm **em branco**: assim o PDF imprime só "Enfermeiro(a) e
+   Coordenador(a) da Unidade" sob a linha de assinatura, para preencher no papel (se
+   preenchidos no popup, saem abaixo do cargo). O **ACS responsável** também vem
+   preenchido pela extração (cartão de CBO "Agente comunitário de saúde" da aba
+   "Informações cadastrais") — confira e ajuste se preciso — e use **"salvar como
+   padrão"** se quiser alterar algum dado fixo permanentemente.
 5. Confira/edite as "Últimas visitas realizadas à família". O accordion de
    "Últimas visitas" do e-SUS só mantém **um item aberto por vez** (abrir o próximo
    fecha o anterior), então a extensão **expande e lê uma visita de cada vez**,
