@@ -1276,19 +1276,24 @@ function buildOrientacoesConteudo(d) {
     ? `<strong>${escapeHtml(visitasLinhas[0])}</strong>`
     : visitasLinhas.map(l => `* ${escapeHtml(l)}`).join('<br>');
 
+  // ESPACAMENTO = <br><br> (a técnica confirmada, garante linha em
+  // branco de verdade). Só entra exatamente nos 5 pontos marcados pelo
+  // usuário: antes de cada um dos 4 títulos/frase, e 3x seguidos antes da
+  // linha de assinatura. Em todo o resto — título -> conteúdo logo
+  // abaixo, entre um item e outro da lista, linha de assinatura -> nome
+  // do ACS — é só 1 <br>, sem linha em branco.
   const ESP1 = '<br>';
-  const ESP2 = '<br><br>';
-  const ESP3 = '<br><br><br>';
+  const ESPACAMENTO = '<br><br>';
 
   const html = '<p>' + [
-    `${ESP2}<strong>DECLARAÇÃO DE ENDEREÇO</strong>${ESP2}`,
-    `${escapeHtml(paragrafo)}${ESP1}`,
-    `<strong>Também residem neste endereço, os seguintes moradores:</strong>${ESP2}`,
-    `${moradoresHtml}${ESP1}`,
-    `<strong>Últimas visitas realizadas à família:</strong>${ESP2}`,
-    `${visitasHtml}${ESP2}`,
-    `Para clareza e por ser verdade, firmo a presente declaração.${ESP2}`,
-    `________________________________${ESP3}`,
+    `${ESPACAMENTO}<strong>DECLARAÇÃO DE ENDEREÇO</strong>${ESP1}`,
+    `${escapeHtml(paragrafo)}${ESPACAMENTO}`,
+    `<strong>Também residem neste endereço, os seguintes moradores:</strong>${ESP1}`,
+    `${moradoresHtml}${ESPACAMENTO}`,
+    `<strong>Últimas visitas realizadas à família:</strong>${ESP1}`,
+    `${visitasHtml}${ESPACAMENTO}`,
+    `Para clareza e por ser verdade, firmo a presente declaração.${ESPACAMENTO}${ESPACAMENTO}${ESPACAMENTO}`,
+    `________________________________${ESP1}`,
     escapeHtml(acsTexto)
   ].join('') + '</p>';
 

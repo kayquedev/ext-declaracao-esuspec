@@ -94,12 +94,12 @@ blocos separados **não garantem quebra de linha nenhuma** ao colar (pode vir tu
 "grudado") — só `<strong>`/`<b>` (negrito), `<i>`/`<u>` (itálico/sublinhado) e
 emoji/Unicode colam certo de forma confiável. Por isso o texto inteiro vai como
 **um único `<p>`**, com `<br>` controlando cada quebra. Linha em branco
-(`<br><br>`) só nestes pontos: antes e depois de "DECLARAÇÃO DE ENDEREÇO",
-depois de cada título que introduz uma lista ("...os seguintes moradores:" /
-"Últimas visitas..."), e antes e depois de "...firmo a presente declaração.";
-antes da linha do ACS são `<br><br><br>` (o triplo). Nos outros pontos — título
-→ conteúdo colado logo abaixo, entre uma linha e outra da lista de
-moradores/visitas, linha de assinatura → nome do ACS — é só 1 `<br>`, sem linha
+(`<br><br>`) só antes de cada um destes 4 pontos: "DECLARAÇÃO DE ENDEREÇO",
+"...os seguintes moradores:", "Últimas visitas...", "...firmo a presente
+declaração."; antes da linha do ACS são três seguidos (`<br><br>` × 3). Nos
+outros pontos — título → conteúdo colado logo abaixo, entre uma linha e outra
+da lista de moradores/visitas, linha de assinatura → nome do ACS — é só 1
+`<br>`, sem linha
 em branco. As linhas de moradores e de visitas usam `* ` na frente (texto
 simples, não `<ul>`/`<li>`) para parecer lista sem depender de bloco separado.
 Tamanho de fonte, cor/destaque, `<img>`
