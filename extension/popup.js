@@ -1234,9 +1234,10 @@ function escapeHtml(s) {
 // inline, <img> e <table> são descartados (ou pior, no caso de <img>,
 // vazam a URL como texto gigante). Por isso o HTML aqui só usa <p>,
 // <strong> e <ul>/<li> — nada de <br>, cor ou tamanho de fonte.
-// Não inclui cabeçalho da prefeitura (a aba já tem o próprio timbre) nem a
-// assinatura do(a) enfermeiro(a): a aba assina sozinha com quem estiver
-// logado ao salvar, então só o ACS entra no texto.
+// Não inclui cabeçalho da prefeitura nem data (a aba já tem o próprio timbre
+// e já gera a data automaticamente ao salvar) nem a assinatura do(a)
+// enfermeiro(a): a aba assina sozinha com quem estiver logado ao salvar,
+// então só o ACS entra no texto.
 function buildOrientacoesConteudo(d) {
   const p = prepararDeclaracao(d);
   const acsTexto = d.acs ? `ACS ${d.acs}` : 'ACS Responsável';
@@ -1276,7 +1277,6 @@ function buildOrientacoesConteudo(d) {
     `<p><strong>Últimas visitas realizadas à família:</strong></p>`,
     visitasBloco,
     `<p>Para clareza e por ser verdade, firmo a presente declaração.</p>`,
-    `<p>${escapeHtml(p.local)}, ${escapeHtml(d.dataExtenso)}.</p>`,
     `<p>&nbsp;</p>`,
     `<p>________________________________</p>`,
     `<p>${escapeHtml(acsTexto)}</p>`
@@ -1296,7 +1296,6 @@ function buildOrientacoesConteudo(d) {
     ...visitasLinhas,
     '',
     'Para clareza e por ser verdade, firmo a presente declaração.',
-    `${p.local}, ${d.dataExtenso}.`,
     '',
     '________________________________',
     acsTexto

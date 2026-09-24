@@ -79,12 +79,14 @@ entre as duas com um único clique:
    `Declaracao_Endereco_<nome_do_usuario>.pdf`, com o brasão da prefeitura como
    marca d'água grande e centralizada na página, igual ao modelo oficial.
 
-## Registrar direto no prontuário (aba "Orientações")
+## Registrar direto no prontuário (aba "Orientações") — jeito preferido
 
-Em vez do PDF, dá para registrar a mesma declaração na aba **Orientações** do
-prontuário do cidadão no e-SUS PEC. Clique em **"📋 Copiar para 'Orientações'
-(e-SUS)"** (mesma validação do PDF: precisa do nome do usuário e da data), abra a
-aba Orientações no e-SUS e cole com **Ctrl+V**.
+O ideal é registrar a declaração direto na aba **Orientações** do prontuário do
+cidadão no e-SUS PEC, em vez do PDF avulso — por isso o botão **"📋 Copiar para
+'Orientações' (e-SUS)"** vem primeiro e em destaque no formulário. Clique nele
+(mesma validação do PDF: precisa do nome do usuário e da data), abra a aba
+Orientações no e-SUS e cole com **Ctrl+V**. O botão "📄 Gerar PDF" continua
+disponível, para quando o PDF avulso for realmente necessário.
 
 O texto copiado vai como HTML de verdade (a aba Orientações é um campo de texto
 rico), mas só com as tags confirmadas manualmente contra o campo real: `<p>`,
@@ -93,9 +95,9 @@ e `<ul>`/`<li>` (lista de moradores e de visitas). `<i>`/`<u>` (itálico/sublinh
 e emoji/Unicode também colam certo, mas não são usados aqui. Testado e **não**
 usado por não sobreviver ao colar: tamanho de fonte, cor/destaque, `<img>` (cola a
 URL da imagem como texto gigante) e `<table>`. Não traz o cabeçalho da prefeitura
-(a aba já imprime o próprio timbre) nem a assinatura do(a) enfermeiro(a) — a aba
-assina sozinha com o profissional logado ao salvar — por isso só entra a linha
-`ACS <nome>` no final.
+(a aba já imprime o próprio timbre), nem a data (a aba já gera a data automático
+ao salvar), nem a assinatura do(a) enfermeiro(a) — a aba assina sozinha com o
+profissional logado ao salvar — por isso só entra a linha `ACS <nome>` no final.
 
 ## Sobre a extração
 
