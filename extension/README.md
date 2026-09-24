@@ -92,15 +92,17 @@ O texto copiado vai como HTML de verdade (a aba Orientações é um campo de tex
 rico), mas testado manualmente contra o campo real: `<p>` ou `<ul>`/`<li>` como
 blocos separados **não garantem quebra de linha nenhuma** ao colar (pode vir tudo
 "grudado") — só `<strong>`/`<b>` (negrito), `<i>`/`<u>` (itálico/sublinhado) e
-emoji/Unicode colam certo de forma confiável. A única forma confirmada de garantir
-a quebra é `<br><br>` (dois seguidos) dentro de um único parágrafo — é o que
-separa corretamente cada nome numa lista. Por isso o texto inteiro vai como **um
-único `<p>`**: `<br>` simples onde não precisa de garantia (título → conteúdo
-colado logo abaixo, linha de assinatura → nome do ACS), `<br><br>` entre cada
-linha de moradores/visitas, e `<br><br><br>` antes da linha de assinatura. As
-linhas de moradores e de visitas usam `* ` na frente (texto simples, não
-`<ul>`/`<li>`) para parecer lista sem depender de bloco separado. Tamanho de
-fonte, cor/destaque, `<img>`
+emoji/Unicode colam certo de forma confiável. Por isso o texto inteiro vai como
+**um único `<p>`**, com `<br>` controlando cada quebra. Linha em branco
+(`<br><br>`) só nestes pontos: antes e depois de "DECLARAÇÃO DE ENDEREÇO",
+depois de cada título que introduz uma lista ("...os seguintes moradores:" /
+"Últimas visitas..."), e antes e depois de "...firmo a presente declaração.";
+antes da linha do ACS são `<br><br><br>` (o triplo). Nos outros pontos — título
+→ conteúdo colado logo abaixo, entre uma linha e outra da lista de
+moradores/visitas, linha de assinatura → nome do ACS — é só 1 `<br>`, sem linha
+em branco. As linhas de moradores e de visitas usam `* ` na frente (texto
+simples, não `<ul>`/`<li>`) para parecer lista sem depender de bloco separado.
+Tamanho de fonte, cor/destaque, `<img>`
 (cola a URL da imagem como texto gigante) e `<table>` não sobrevivem ao colar e
 não são usados. Não traz o cabeçalho da prefeitura
 (a aba já imprime o próprio timbre), nem a data (a aba já gera a data automático

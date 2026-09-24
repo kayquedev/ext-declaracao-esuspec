@@ -1231,17 +1231,20 @@ function escapeHtml(s) {
 // manualmente contra o campo real: <p> separados (ou <ul>/<li> como bloco
 // à parte) NÃO garantem quebra de linha nenhuma ao colar — pode vir tudo
 // "grudado". A única forma confirmada de garantir a quebra é <br><br>
-// (dois seguidos) dentro de um único parágrafo — é o que separa
-// corretamente cada nome numa lista de nomes, por exemplo. Por isso o
-// texto inteiro vai como um <p> só: <br> simples só onde não precisa de
-// garantia (título -> conteúdo colado logo abaixo, linha de assinatura ->
-// nome do ACS) e <br><br> entre cada item de uma lista (morador, visita).
-// As linhas de moradores/visitas usam "* " na frente (texto simples, sem
-// <ul>) para parecer lista sem depender de <ul> quebrar bloco. Não inclui
-// cabeçalho da prefeitura nem data (a aba já tem o próprio timbre e já
-// gera a data automaticamente ao salvar) nem a assinatura do(a)
-// enfermeiro(a): a aba assina sozinha com quem estiver logado ao salvar,
-// então só o ACS entra no texto.
+// dentro de um único parágrafo. Por isso o texto inteiro vai como um <p>
+// só. Espaçamento (linha em branco, <br><br>) só nestes pontos: antes E
+// depois de "DECLARAÇÃO DE ENDEREÇO", depois de cada título que introduz
+// uma lista ("...os seguintes moradores:" / "Últimas visitas..."), antes
+// E depois de "...firmo a presente declaração.", e um espaçamento maior
+// (3x) antes da linha do ACS. Nos outros pontos (título -> conteúdo sem
+// precisar de linha em branco, entre um item e outro da lista de
+// moradores/visitas, linha de assinatura -> nome do ACS) é só 1 <br>,
+// sem abrir linha em branco. As linhas de moradores/visitas usam "* " na
+// frente (texto simples, sem <ul>) para parecer lista sem depender de
+// bloco separado. Não inclui cabeçalho da prefeitura nem data (a aba já
+// tem o próprio timbre e já gera a data automaticamente ao salvar) nem a
+// assinatura do(a) enfermeiro(a): a aba assina sozinha com quem estiver
+// logado ao salvar, então só o ACS entra no texto.
 function buildOrientacoesConteudo(d) {
   const p = prepararDeclaracao(d);
   const acsTexto = d.acs ? `ACS ${d.acs}` : 'ACS Responsável';
@@ -1264,27 +1267,28 @@ function buildOrientacoesConteudo(d) {
   const avisoSemVisita = p.visitas.length === 0;
 
   // Sem dado, o aviso fica sozinho em negrito (não é lista); com dados,
-  // cada linha ganha "* " na frente e as linhas são separadas por
-  // <br><br> — o mesmo padrão confirmado para separar nomes.
+  // cada linha ganha "* " na frente e fica com 1 <br> entre uma e outra
+  // (tight, sem linha em branco entre os itens).
   const moradoresHtml = avisoSemMorador
     ? `<strong>${escapeHtml(moradoresLinhas[0])}</strong>`
-    : moradoresLinhas.map(l => `* ${escapeHtml(l)}`).join('<br><br>');
+    : moradoresLinhas.map(l => `* ${escapeHtml(l)}`).join('<br>');
   const visitasHtml = avisoSemVisita
     ? `<strong>${escapeHtml(visitasLinhas[0])}</strong>`
-    : visitasLinhas.map(l => `* ${escapeHtml(l)}`).join('<br><br>');
+    : visitasLinhas.map(l => `* ${escapeHtml(l)}`).join('<br>');
 
   const ESP1 = '<br>';
+  const ESP2 = '<br><br>';
   const ESP3 = '<br><br><br>';
 
   const html = '<p>' + [
-    `${ESP1}<strong>DECLARAÇÃO DE ENDEREÇO</strong>${ESP1}`,
+    `${ESP2}<strong>DECLARAÇÃO DE ENDEREÇO</strong>${ESP2}`,
     `${escapeHtml(paragrafo)}${ESP1}`,
-    `<strong>Também residem neste endereço, os seguintes moradores:</strong>${ESP1}`,
+    `<strong>Também residem neste endereço, os seguintes moradores:</strong>${ESP2}`,
     `${moradoresHtml}${ESP1}`,
-    `<strong>Últimas visitas realizadas à família:</strong>${ESP1}`,
-    `${visitasHtml}${ESP1}`,
-    `Para clareza e por ser verdade, firmo a presente declaração.${ESP3}`,
-    `________________________________${ESP1}`,
+    `<strong>Últimas visitas realizadas à família:</strong>${ESP2}`,
+    `${visitasHtml}${ESP2}`,
+    `Para clareza e por ser verdade, firmo a presente declaração.${ESP2}`,
+    `________________________________${ESP3}`,
     escapeHtml(acsTexto)
   ].join('') + '</p>';
 
