@@ -89,20 +89,17 @@ Orientações no e-SUS e cole com **Ctrl+V**. O botão "📄 Gerar PDF" continua
 disponível, para quando o PDF avulso for realmente necessário.
 
 O texto copiado vai como HTML de verdade (a aba Orientações é um campo de texto
-rico), mas testado manualmente contra o campo real: `<p>` ou `<ul>`/`<li>` como
-blocos separados **não garantem quebra de linha nenhuma** ao colar (pode vir tudo
-"grudado") — só `<strong>`/`<b>` (negrito), `<i>`/`<u>` (itálico/sublinhado) e
-emoji/Unicode colam certo de forma confiável. Por isso o texto inteiro vai como
-**um único `<p>`**, com `<br>` controlando cada quebra. Linha em branco
-(`<br><br>`) só antes de cada um destes 4 pontos: "DECLARAÇÃO DE ENDEREÇO",
-"...os seguintes moradores:", "Últimas visitas...", "...firmo a presente
-declaração."; antes da linha do ACS são três seguidos (`<br><br>` × 3). Nos
-outros pontos — título → conteúdo colado logo abaixo, entre uma linha e outra
-da lista de moradores/visitas, linha de assinatura → nome do ACS — é só 1
-`<br>`, sem linha
-em branco. As linhas de moradores e de visitas usam `* ` na frente (texto
-simples, não `<ul>`/`<li>`) para parecer lista sem depender de bloco separado.
-Tamanho de fonte, cor/destaque, `<img>`
+rico), mas testado manualmente contra o campo real: dentro de um único
+parágrafo, `<br><br>` é a forma confirmada de abrir linha em branco de verdade
+(`<p>` ou `<ul>` separados sozinhos não garantem quebra nenhuma). Por isso
+título/parágrafo/frase de fechamento ficam num `<p>` só, com linha em branco só
+antes de cada um destes 4 pontos: "DECLARAÇÃO DE ENDEREÇO", "...os seguintes
+moradores:", "Últimas visitas...", "...firmo a presente declaração."; antes da
+linha do ACS são quatro seguidos (`<br><br>` × 4). No resto — título → conteúdo
+colado logo abaixo, linha de assinatura → nome do ACS — é só 1 `<br>`, sem linha
+em branco. Moradores e visitas usam `<ul>`/`<li>` de verdade (também confirmado
+colando certo) como blocos à parte entre esses parágrafos, já que `<ul>` não
+pode ficar dentro de `<p>`. Tamanho de fonte, cor/destaque, `<img>`
 (cola a URL da imagem como texto gigante) e `<table>` não sobrevivem ao colar e
 não são usados. Não traz o cabeçalho da prefeitura
 (a aba já imprime o próprio timbre), nem a data (a aba já gera a data automático
